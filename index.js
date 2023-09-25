@@ -158,6 +158,7 @@ async function attemptMerge(pr1, pr2) {
   return conflictFiles;
 }
 
+
 async function createConflictComment({
   octokit,
   repo,
