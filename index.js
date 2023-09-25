@@ -179,7 +179,7 @@ async function createConflictComment({
       conflictMessage += `<details>\n`;
       conflictMessage += `  <summary><strong>Author:</strong> @${conflict.user} - <strong>PR:</strong> #${conflict.number}</summary>\n`;
       conflict.conflictFiles.forEach((fileName) => {
-        conflictMessage += `  <span><strong>${fileName}</span><br />`;
+        conflictMessage += `  <span>${fileName}</span><br />`;
       });
       conflictMessage += `</details>\n\n`;
     });
