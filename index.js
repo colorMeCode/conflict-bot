@@ -1,5 +1,6 @@
 const core = require("@actions/core");
 const github = require("@actions/github");
+const { execSync } = require("child_process");
 
 async function run3() {
   try {
@@ -9,11 +10,6 @@ async function run3() {
     const pullRequest = github.context.payload.pull_request;
     const repo = github.context.repo;
 
-    const changedFilesData = await getChangedFilesData({
-      octokit,
-      repo,
-      prNumber: pullRequest.number,
-    });
     const openPullRequests = await getOpenPullRequests(octokit, repo);
     const otherOpenPullRequests = openPullRequests.filter(
       (pr) => pr.number !== pullRequest.number
@@ -22,22 +18,18 @@ async function run3() {
     let conflictArray = [];
 
     for (const openPullRequest of otherOpenPullRequests) {
-      const openPRChangedFilesData = await getChangedFilesData({
+      const conflictFiles = checkForConflicts({
         octokit,
         repo,
-        prNumber: openPullRequest.number,
+        pr1Number: pullRequest.number,
+        pr2Number: openPullRequest.number,
       });
 
-      const conflictInfo = checkForConflicts(
-        changedFilesData,
-        openPRChangedFilesData
-      );
-
-      if (conflictInfo.hasConflict) {
+      if (conflictFiles) {
         conflictArray.push({
           number: openPullRequest.number,
           user: openPullRequest.user.login,
-          conflicts: conflictInfo.conflicts,
+          conflictFiles,
         });
       }
     }
@@ -68,77 +60,6 @@ async function run3() {
   }
 }
 
-async function getChangedFilesData({ octokit, repo, prNumber }) {
-  try {
-    // Fetch the list of files changed in the PR
-    const { data: files } = await octokit.rest.pulls.listFiles({
-      owner: repo.owner,
-      repo: repo.repo,
-      pull_number: prNumber,
-    });
-
-    // Initialize an object to store file paths and the lines changed
-    let changedFilesData = {};
-
-    for (const file of files) {
-      // Get the patch text which contains info about the lines changed
-      const patchText = file.patch;
-      console.log(file, patchText)
-
-      // Check if patch text is available (it might not be for binary files)
-      if (patchText) {
-        // Parse the patch text to get the changed lines
-        const changedLines = parsePatchText(patchText);
-
-        // Add the file path and changed lines to the data structure
-        changedFilesData[file.filename] = changedLines;
-      }
-    }
-
-    return changedFilesData;
-  } catch (error) {
-    console.error(`Error fetching changed files data: ${error.message}`);
-    throw error;
-  }
-}
-
-function parsePatchText(patchText) {
-  const lines = patchText.split("\n");
-  let currentNewLineNumber = 0;
-  let changes = [];
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-
-    // Detect new hunk and extract the starting line number for the new content
-    const lineNumberMatch = line.match(/@@ -\d+,\d+ \+(\d+),\d+ @@/);
-    if (lineNumberMatch) {
-      currentNewLineNumber = parseInt(lineNumberMatch[1], 10) - 1;
-      continue;
-    }
-
-    if (!line.startsWith("-")) {
-      currentNewLineNumber++;
-    }
-
-    // Changed line
-    if (line.startsWith("+") && !line.startsWith("+++")) {
-      changes.push({
-        lineNumber: currentNewLineNumber,
-        content: line.substr(1).trim(),
-        context: [
-          lines[i - 2] ? lines[i - 2].trim() : null,
-          lines[i - 1] ? lines[i - 1].trim() : null,
-          lines[i + 1] ? lines[i + 1].trim() : null,
-          lines[i + 2] ? lines[i + 2].trim() : null,
-        ],
-      });
-    }
-  }
-
-  return changes;
-}
-
 async function getOpenPullRequests(octokit, repo) {
   try {
     const { data: pullRequests } = await octokit.rest.pulls.list({
@@ -161,39 +82,55 @@ async function getOpenPullRequests(octokit, repo) {
   }
 }
 
-function checkForConflicts(changedFilesData, openPRChangedFilesData) {
-    let conflictInfo = {
-        hasConflict: false,
-        conflicts: [],
-    };
+async function checkForConflicts({ octokit, repo, pr1Number, pr2Number }) {
+  const pr1Files = await getChangedFiles(octokit, repo, pr1Number);
+  const pr2Files = await getChangedFiles(octokit, repo, pr2Number);
 
-    // Iterate through each file in changedFilesData
-    for (const [filePath, changedLinesData] of Object.entries(changedFilesData)) {
-        // Check if the file is also present in openPRChangedFilesData
-        if (openPRChangedFilesData.hasOwnProperty(filePath)) {
-            const openPRChangedLinesData = openPRChangedFilesData[filePath];
+  const overlappingFiles = pr1Files.filter((file) => pr2Files.includes(file));
 
-            // For every changed line data in the current PR, compare with open PR changed lines data
-            for (const changedLineData of changedLinesData) {
-                for (const openPRChangedLineData of openPRChangedLinesData) {
-                    // Check if content matches
-                    if (changedLineData.content === openPRChangedLineData.content) {
-                        // Further checks can be added here for surrounding context and relative position
+  if (!overlappingFiles.length) {
+    return [];
+  }
 
-                        // For now, if the content matches, we consider it a conflict
-                        conflictInfo.hasConflict = true;
-                        conflictInfo.conflicts.push({
-                            file: filePath,
-                            lines: [changedLineData.lineNumber],  // This can be expanded to include both line numbers
-                        });
-                        break;  // Exit inner loop for this changed line
-                    }
-                }
-            }
-        }
+  const conflictFiles = await attemptMerge(pr1, pr2);
+
+  return conflictFiles;
+}
+
+async function getChangedFiles(octokit, repo, prNumber) {
+  const { data: files } = await octokit.pulls.listFiles({
+    owner: repo.owner,
+    repo: repo.repo,
+    pull_number: prNumber,
+  });
+
+  return files.map((file) => file.filename);
+}
+
+async function attemptMerge(pr1, pr2) {
+  let conflictFiles = [];
+
+  try {
+    // Checkout PR1's branch
+    execSync(`git checkout ${pr1}`);
+
+    // Attempt to merge PR2's branch
+    execSync(`git merge ${pr2} --no-commit --no-ff`);
+  } catch (error) {
+    // Check for merge conflict message in the error
+    if (error.message.includes("Automatic merge failed")) {
+      // Extract names of files with conflicts. The `git diff` command lists files with conflicts
+      const output = execSync(
+        "git diff --name-only --diff-filter=U"
+      ).toString();
+      conflictFiles = output.split("\n").filter(Boolean); // Convert string output to an array and filter out any empty strings
     }
+  } finally {
+    // Return to the original state (discard the temporary merge)
+    execSync("git merge --abort");
+  }
 
-    return conflictInfo;
+  return conflictFiles;
 }
 
 async function createConflictComment({
@@ -208,15 +145,9 @@ async function createConflictComment({
     conflictArray.forEach((conflict) => {
       conflictMessage += `<details>\n`;
       conflictMessage += `  <summary><strong>Author:</strong> @${conflict.user} - <strong>PR:</strong> #${conflict.number}</summary>\n`;
-
-      // Loop through the conflicts array for each PR
-      conflict.conflicts.forEach((fileConflict) => {
-        conflictMessage += `  <span><strong>File:</strong> ${fileConflict.file}</span><br />`;
-        conflictMessage += `  <span><strong>${
-          fileConflict.lines.length > 1 ? "Lines" : "Line"
-        }:</strong> ${fileConflict.lines.join(", ")}</span><br /><br />`;
+      conflict.conflictFiles.forEach((fileName) => {
+        conflictMessage += `  <span><strong>${fileName}</span><br />`;
       });
-
       conflictMessage += `</details>\n\n`;
     });
 
@@ -231,7 +162,6 @@ async function createConflictComment({
     throw error;
   }
 }
-
 
 async function requestReviews({
   octokit,
