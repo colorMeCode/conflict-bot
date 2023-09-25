@@ -144,6 +144,7 @@ async function attemptMerge(pr1, pr2) {
       execSync(`git merge refs/remotes/origin/tmp_${pr2} --no-commit --no-ff`);
       console.log("Merge successful");
     } catch (mergeError) {
+      console.log('mergeError', mergeError);
       if (mergeError.message.includes("Automatic merge failed")) {
         const output = execSync("git diff --name-only --diff-filter=U").toString();
         conflictFiles = output.split("\n").filter(Boolean);
