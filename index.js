@@ -126,6 +126,7 @@ async function getChangedFiles(octokit, repo, prNumber) {
 
 async function attemptMerge(pr1, pr2) {
   let conflictFiles = [];
+  let hasConflict = false;
 
   try {
     // Checkout PR1's branch
@@ -136,6 +137,7 @@ async function attemptMerge(pr1, pr2) {
   } catch (error) {
     // Check for merge conflict message in the error
     if (error.message.includes("Automatic merge failed")) {
+      hasConflict = true;
       // Extract names of files with conflicts. The `git diff` command lists files with conflicts
       const output = execSync(
         "git diff --name-only --diff-filter=U"
@@ -143,12 +145,15 @@ async function attemptMerge(pr1, pr2) {
       conflictFiles = output.split("\n").filter(Boolean); // Convert string output to an array and filter out any empty strings
     }
   } finally {
-    // Return to the original state (discard the temporary merge)
-    execSync("git merge --abort");
+    // Only abort if there was a merge conflict detected
+    if (hasConflict) {
+      execSync("git merge --abort");
+    }
   }
 
   return conflictFiles;
 }
+
 
 async function createConflictComment({
   octokit,
