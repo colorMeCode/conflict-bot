@@ -2,10 +2,9 @@ const core = require("@actions/core");
 const github = require("@actions/github");
 const { execSync } = require("child_process");
 
-async function run1() {
+async function run() {
   try {
     const token = core.getInput("github-token", { required: true });
-
     const octokit = github.getOctokit(token);
 
     const pullRequest = github.context.payload.pull_request;
@@ -146,16 +145,15 @@ async function attemptMerge(pr1, pr2) {
     } catch (mergeError) {
       const stdoutStr = mergeError.stdout.toString();
       if (stdoutStr.includes("Automatic merge failed")) {
-        conflictFiles = statusOutput
-          .split("\n")
-          .filter((line) => line.includes("both modified"))
-          .map((line) => line.split(":")[1].trim());
+        const output = execSync(
+          "git diff --name-only --diff-filter=U"
+        ).toString();
+        conflictFiles = output.split("\n").filter(Boolean);
       }
     }
   } catch (error) {
     console.error(`Error during merge process: ${error.message}`);
   } finally {
-    execSync(`git reset --hard HEAD`); // Reset any changes
     // Cleanup by deleting temporary refs
     execSync(`git update-ref -d refs/remotes/origin/tmp_${pr1}`);
     execSync(`git update-ref -d refs/remotes/origin/tmp_${pr2}`);
@@ -177,7 +175,7 @@ async function createConflictComment({
       conflictMessage += `<details>\n`;
       conflictMessage += `  <summary><strong>Author:</strong> @${conflict.user} - <strong>PR:</strong> #${conflict.number}</summary>\n`;
       conflict.conflictFiles.forEach((fileName) => {
-        conflictMessage += `  <span>${fileName}</span><br />`;
+        conflictMessage += `  <span><strong>${fileName}</span><br />`;
       });
       conflictMessage += `</details>\n\n`;
     });
@@ -248,4 +246,4 @@ async function requestReviewsInConflictingPRs({
   }
 }
 
-run1();
+run();
