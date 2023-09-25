@@ -153,7 +153,7 @@ async function attemptMerge(pr1, pr2) {
          .filter(line => line.includes("both modified"))
          .map(line => line.split(":")[1].trim());
         // const output = execSync("git diff --name-only --diff-filter=U").toString();
-        conflictFiles = output.split("\n").filter(Boolean);
+        // conflictFiles = output.split("\n").filter(Boolean);
         console.log(`Conflicts found: ${conflictFiles.join(", ")}`);
       }
     }
