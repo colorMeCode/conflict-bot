@@ -1,7 +1,7 @@
 const core = require("@actions/core");
 const github = require("@actions/github");
 
-async function run2() {
+async function run3() {
   try {
     const token = core.getInput("github-token", { required: true });
     const octokit = github.getOctokit(token);
@@ -273,4 +273,4 @@ async function requestReviewsInConflictingPRs({
   }
 }
 
-run2();
+run3();
