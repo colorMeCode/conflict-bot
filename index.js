@@ -145,21 +145,17 @@ async function attemptMerge(pr1, pr2) {
       console.log("Merge successful");
     } catch (mergeError) {
       const stdoutStr = mergeError.stdout.toString();
-      console.log('stdoutStr', stdoutStr);
       if (stdoutStr.includes("Automatic merge failed")) {
-        const statusOutput = execSync("git status").toString();
-        const conflictFiles = statusOutput.split("\n")
-         .filter(line => line.includes("both modified"))
-         .map(line => line.split(":")[1].trim());
-        // const output = execSync("git diff --name-only --diff-filter=U").toString();
-        // conflictFiles = output.split("\n").filter(Boolean);
-        console.log(`Conflicts found: ${conflictFiles.join(", ")}`);
+        conflictFiles = statusOutput
+          .split("\n")
+          .filter((line) => line.includes("both modified"))
+          .map((line) => line.split(":")[1].trim());
       }
     }
-
   } catch (error) {
     console.error(`Error during merge process: ${error.message}`);
   } finally {
+    execSync(`git reset --hard HEAD`); // Reset any changes
     // Cleanup by deleting temporary refs
     execSync(`git update-ref -d refs/remotes/origin/tmp_${pr1}`);
     execSync(`git update-ref -d refs/remotes/origin/tmp_${pr2}`);
