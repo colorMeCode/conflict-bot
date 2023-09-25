@@ -195,7 +195,10 @@ async function createConflictComment({
   try {
     let conflictMessage = "### Conflicts Found\n\n";
 
+    console.log(conflictArray)
+
     conflictArray.forEach((conflict) => {
+      console.log(conflict)
       conflictMessage += `<details>\n`;
       conflictMessage += `  <summary><strong>Author:</strong> ${conflict.author} - <strong>PR:</strong> #${conflict.prNumber}</summary>\n`;
       conflictMessage += `  <p><strong>File:</strong> ${conflict.file}</p>\n`;
