@@ -102,31 +102,41 @@ async function getChangedFilesData({ octokit, repo, prNumber }) {
 }
 
 function parsePatchText(patchText) {
-  let changedLines = [];
-  const lines = patchText.split('\n');
-  
-  let currentLineNumber = 0;
-  for (const line of lines) {
-    // Capture the start line number of the new hunk
+  const lines = patchText.split("\n");
+  let currentNewLineNumber = 0;
+  let changes = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Detect new hunk and extract the starting line number for the new content
     const lineNumberMatch = line.match(/@@ -\d+,\d+ \+(\d+),\d+ @@/);
     if (lineNumberMatch) {
-      currentLineNumber = parseInt(lineNumberMatch[1], 10) - 1;
+      currentNewLineNumber = parseInt(lineNumberMatch[1], 10) - 1;
       continue;
     }
-    
-    // Increment the line number for non-deletion lines
-    if (!line.startsWith('-')) {
-      currentLineNumber++;
+
+    if (!line.startsWith("-")) {
+      currentNewLineNumber++;
     }
-    
-    // If the line is an addition, add the current line number to the changed lines
-    if (line.startsWith('+') && !line.startsWith('+++')) {
-      changedLines.push(currentLineNumber);
+
+    // Changed line
+    if (line.startsWith("+") && !line.startsWith("+++")) {
+      changes.push({
+        lineNumber: currentNewLineNumber,
+        content: line.substr(1).trim(),
+        context: [
+          lines[i - 2] ? lines[i - 2].trim() : null,
+          lines[i - 1] ? lines[i - 1].trim() : null,
+          lines[i + 1] ? lines[i + 1].trim() : null,
+          lines[i + 2] ? lines[i + 2].trim() : null,
+        ],
+      });
     }
   }
-  return changedLines;
-}
 
+  return changes;
+}
 
 async function getOpenPullRequests(octokit, repo) {
   try {
