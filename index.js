@@ -82,8 +82,6 @@ async function getOpenPullRequests(octokit, repo) {
   }
 }
 
-const { execSync } = require("child_process");
-
 async function checkForConflicts({ octokit, repo, pr1Number, pr2Number }) {
   const pr1Branch = await getBranchName(octokit, repo, pr1Number);
   const pr2Branch = await getBranchName(octokit, repo, pr2Number);
