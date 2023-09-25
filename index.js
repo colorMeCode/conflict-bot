@@ -2,7 +2,7 @@ const core = require("@actions/core");
 const github = require("@actions/github");
 const { execSync } = require("child_process");
 
-async function run3() {
+async function run() {
   try {
     const token = core.getInput("github-token", { required: true });
     const octokit = github.getOctokit(token);
@@ -82,7 +82,16 @@ async function getOpenPullRequests(octokit, repo) {
   }
 }
 
+const { execSync } = require("child_process");
+
 async function checkForConflicts({ octokit, repo, pr1Number, pr2Number }) {
+  const pr1Branch = await getBranchName(octokit, repo, pr1Number);
+  const pr2Branch = await getBranchName(octokit, repo, pr2Number);
+
+  if (!pr1Branch || !pr2Branch) {
+    throw new Error("Failed to fetch branch name for one or both PRs.");
+  }
+
   const pr1Files = await getChangedFiles(octokit, repo, pr1Number);
   const pr2Files = await getChangedFiles(octokit, repo, pr2Number);
 
@@ -92,13 +101,23 @@ async function checkForConflicts({ octokit, repo, pr1Number, pr2Number }) {
     return [];
   }
 
-  const conflictFiles = await attemptMerge(pr1, pr2);
+  const conflictFiles = await attemptMerge(pr1Branch, pr2Branch);
 
   return conflictFiles;
 }
 
+async function getBranchName(octokit, repo, prNumber) {
+  const { data: pr } = await octokit.rest.pulls.get({
+    owner: repo.owner,
+    repo: repo.repo,
+    pull_number: prNumber,
+  });
+
+  return pr.head.ref;
+}
+
 async function getChangedFiles(octokit, repo, prNumber) {
-  const { data: files } = await octokit.pulls.listFiles({
+  const { data: files } = await octokit.rest.pulls.listFiles({
     owner: repo.owner,
     repo: repo.repo,
     pull_number: prNumber,
@@ -217,4 +236,4 @@ async function requestReviewsInConflictingPRs({
   }
 }
 
-run3();
+run();
