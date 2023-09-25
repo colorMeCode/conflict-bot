@@ -83,6 +83,7 @@ async function getChangedFilesData({ octokit, repo, prNumber }) {
     for (const file of files) {
       // Get the patch text which contains info about the lines changed
       const patchText = file.patch;
+      console.log(file, patchText)
 
       // Check if patch text is available (it might not be for binary files)
       if (patchText) {
