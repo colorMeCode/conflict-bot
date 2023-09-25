@@ -127,34 +127,32 @@ async function getChangedFiles(octokit, repo, prNumber) {
 async function attemptMerge(pr1, pr2) {
   console.log(`Attempting to merge ${pr2} into ${pr1}`);
   let conflictFiles = [];
-  let hasConflict = false;
 
   try {
-    execSync(`git fetch origin ${pr1}:${pr1}`);
-    execSync(`git fetch origin ${pr2}:${pr2}`);
+    // Fetch PR branches into temporary refs
+    execSync(`git fetch origin ${pr1}:refs/remotes/origin/tmp_${pr1}`);
+    execSync(`git fetch origin ${pr2}:refs/remotes/origin/tmp_${pr2}`);
 
-    execSync(`git checkout ${pr1}`);
+    execSync(`git checkout refs/remotes/origin/tmp_${pr1}`);
 
-    // Attempt to merge PR2's branch in memory without committing or fast-forwarding
-    execSync(`git merge ${pr2} --no-commit --no-ff`);
-    console.log("Merge successful");
+    try {
+      // Attempt to merge PR2's branch in memory without committing or fast-forwarding
+      execSync(`git merge refs/remotes/origin/tmp_${pr2} --no-commit --no-ff`);
+      console.log("Merge successful");
+    } catch (mergeError) {
+      if (mergeError.message.includes("Automatic merge failed")) {
+        const output = execSync("git diff --name-only --diff-filter=U").toString();
+        conflictFiles = output.split("\n").filter(Boolean);
+        console.log(`Conflicts found: ${conflictFiles.join(", ")}`);
+      }
+    }
+
   } catch (error) {
-    // Check for merge conflict message in the error
-    if (error.message.includes("Automatic merge failed")) {
-      hasConflict = true;
-      // Extract names of files with conflicts. The `git diff` command lists files with conflicts
-      const output = execSync(
-        "git diff --name-only --diff-filter=U"
-      ).toString();
-      conflictFiles = output.split("\n").filter(Boolean); // Convert string output to an array and filter out any empty strings
-      console.log(`Conflicts found: ${conflictFiles.join(", ")}`);
-      console.log("output", output);
-    }
+    console.error(`Error during merge process: ${error.message}`);
   } finally {
-    // Only abort if there was a merge conflict detected
-    if (hasConflict) {
-      execSync("git merge --abort");
-    }
+    // Cleanup by deleting temporary refs
+    execSync(`git update-ref -d refs/remotes/origin/tmp_${pr1}`);
+    execSync(`git update-ref -d refs/remotes/origin/tmp_${pr2}`);
   }
 
   return conflictFiles;
