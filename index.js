@@ -103,34 +103,30 @@ async function getChangedFilesData({ octokit, repo, prNumber }) {
 
 function parsePatchText(patchText) {
   let changedLines = [];
-  const lines = patchText.split("\n");
-
-  let currentOriginalLineNumber = 0;
-
+  const lines = patchText.split('\n');
+  
+  let currentLineNumber = 0;
   for (const line of lines) {
     // Capture the start line number of the new hunk
-    const lineNumberMatch = line.match(/@@ -(\d+),\d+ \+\d+,\d+ @@/);
+    const lineNumberMatch = line.match(/@@ -\d+,\d+ \+(\d+),\d+ @@/);
     if (lineNumberMatch) {
-      currentOriginalLineNumber = parseInt(lineNumberMatch[1], 10) - 1;
+      currentLineNumber = parseInt(lineNumberMatch[1], 10) - 1;
       continue;
     }
-
-    // If the line is a deletion or unchanged, increment the original line number
-    if (
-      line.startsWith("-") ||
-      (!line.startsWith("-") && !line.startsWith("+"))
-    ) {
-      currentOriginalLineNumber++;
+    
+    // Increment the line number for non-deletion lines
+    if (!line.startsWith('-')) {
+      currentLineNumber++;
     }
-
-    // If the line is an addition or a modification, add the current line number to the changed lines
-    if (line.startsWith("+") && !line.startsWith("+++")) {
-      changedLines.push(currentOriginalLineNumber);
+    
+    // If the line is an addition, add the current line number to the changed lines
+    if (line.startsWith('+') && !line.startsWith('+++')) {
+      changedLines.push(currentLineNumber);
     }
   }
-
-  return Array.from(new Set(changedLines));
+  return changedLines;
 }
+
 
 async function getOpenPullRequests(octokit, repo) {
   try {
