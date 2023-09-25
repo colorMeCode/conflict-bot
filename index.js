@@ -18,7 +18,7 @@ async function run() {
     let conflictArray = [];
 
     for (const openPullRequest of otherOpenPullRequests) {
-      const conflictFiles = checkForConflicts({
+      const conflictFiles = await checkForConflicts({
         octokit,
         repo,
         pr1Number: pullRequest.number,
