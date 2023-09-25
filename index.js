@@ -25,6 +25,7 @@ async function run() {
         pr2Number: openPullRequest.number,
       });
 
+      console.log('conflictFiles', conflictFiles)
       if (conflictFiles) {
         conflictArray.push({
           number: openPullRequest.number,
@@ -35,6 +36,7 @@ async function run() {
     }
 
     if (conflictArray.length > 0) {
+      console.log('conflictArray', conflictArray)
       await createConflictComment({
         octokit,
         repo,
