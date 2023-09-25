@@ -161,35 +161,38 @@ async function getOpenPullRequests(octokit, repo) {
 }
 
 function checkForConflicts(changedFilesData, openPRChangedFilesData) {
-  let conflictInfo = {
-    hasConflict: false,
-    conflicts: [],
-  };
+    let conflictInfo = {
+        hasConflict: false,
+        conflicts: [],
+    };
 
-  // Iterate through each file in changedFilesData
-  for (const [filePath, changedLines] of Object.entries(changedFilesData)) {
-    // Check if the file is also present in openPRChangedFilesData
-    if (openPRChangedFilesData.hasOwnProperty(filePath)) {
-      // Get the lines changed in the open PR for the same file
-      const openPRChangedLines = openPRChangedFilesData[filePath];
+    // Iterate through each file in changedFilesData
+    for (const [filePath, changedLinesData] of Object.entries(changedFilesData)) {
+        // Check if the file is also present in openPRChangedFilesData
+        if (openPRChangedFilesData.hasOwnProperty(filePath)) {
+            const openPRChangedLinesData = openPRChangedFilesData[filePath];
 
-      // Check for overlapping line changes
-      const overlappingLines = changedLines.filter((line) =>
-        openPRChangedLines.includes(line)
-      );
+            // For every changed line data in the current PR, compare with open PR changed lines data
+            for (const changedLineData of changedLinesData) {
+                for (const openPRChangedLineData of openPRChangedLinesData) {
+                    // Check if content matches
+                    if (changedLineData.content === openPRChangedLineData.content) {
+                        // Further checks can be added here for surrounding context and relative position
 
-      if (overlappingLines.length > 0) {
-        // If there are any overlapping lines, add this to the conflict info
-        conflictInfo.hasConflict = true;
-        conflictInfo.conflicts.push({
-          file: filePath,
-          lines: overlappingLines,
-        });
-      }
+                        // For now, if the content matches, we consider it a conflict
+                        conflictInfo.hasConflict = true;
+                        conflictInfo.conflicts.push({
+                            file: filePath,
+                            lines: [changedLineData.lineNumber],  // This can be expanded to include both line numbers
+                        });
+                        break;  // Exit inner loop for this changed line
+                    }
+                }
+            }
+        }
     }
-  }
 
-  return conflictInfo;
+    return conflictInfo;
 }
 
 async function createConflictComment({
