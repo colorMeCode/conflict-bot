@@ -146,6 +146,7 @@ async function attemptMerge(pr1, pr2) {
     } catch (mergeError) {
       const stdoutStr = mergeError.stdout.toString();
       if (stdoutStr.includes("Automatic merge failed")) {
+        const statusOutput = execSync("git status").toString();
         conflictFiles = statusOutput
           .split("\n")
           .filter((line) => line.includes("both modified"))
