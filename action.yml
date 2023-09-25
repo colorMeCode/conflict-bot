@@ -1,4 +1,4 @@
-name: "Conflict-Buttocks"
+name: "Conflict-Buttsocks"
 description: "Check for conflicts against other open PRs"
 inputs:
   github-token:
