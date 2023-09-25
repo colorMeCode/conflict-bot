@@ -125,6 +125,7 @@ async function getChangedFiles(octokit, repo, prNumber) {
 }
 
 async function attemptMerge(pr1, pr2) {
+  console.log(`Attempting to merge ${pr2} into ${pr1}`);
   let conflictFiles = [];
   let hasConflict = false;
 
@@ -134,6 +135,7 @@ async function attemptMerge(pr1, pr2) {
 
     // Attempt to merge PR2's branch
     execSync(`git merge ${pr2} --no-commit --no-ff`);
+    console.log("Merge successful");
   } catch (error) {
     // Check for merge conflict message in the error
     if (error.message.includes("Automatic merge failed")) {
