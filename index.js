@@ -147,7 +147,11 @@ async function attemptMerge(pr1, pr2) {
       const stdoutStr = mergeError.stdout.toString();
       console.log('stdoutStr', stdoutStr);
       if (stdoutStr.includes("Automatic merge failed")) {
-        const output = execSync("git diff --name-only --diff-filter=U").toString();
+        const statusOutput = execSync("git status").toString();
+        const conflictFiles = statusOutput.split("\n")
+         .filter(line => line.includes("both modified"))
+         .map(line => line.split(":")[1].trim());
+        // const output = execSync("git diff --name-only --diff-filter=U").toString();
         conflictFiles = output.split("\n").filter(Boolean);
         console.log(`Conflicts found: ${conflictFiles.join(", ")}`);
       }
