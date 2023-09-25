@@ -130,10 +130,12 @@ async function attemptMerge(pr1, pr2) {
   let hasConflict = false;
 
   try {
-    // Checkout PR1's branch
+    execSync(`git fetch origin ${pr1}:${pr1}`);
+    execSync(`git fetch origin ${pr2}:${pr2}`);
+
     execSync(`git checkout ${pr1}`);
 
-    // Attempt to merge PR2's branch
+    // Attempt to merge PR2's branch in memory without committing or fast-forwarding
     execSync(`git merge ${pr2} --no-commit --no-ff`);
     console.log("Merge successful");
   } catch (error) {
