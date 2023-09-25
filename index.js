@@ -25,8 +25,7 @@ async function run() {
         pr2Number: openPullRequest.number,
       });
 
-      console.log('conflictFiles', conflictFiles)
-      if (conflictFiles) {
+      if (conflictFiles.length > 0) {
         conflictArray.push({
           number: openPullRequest.number,
           user: openPullRequest.user.login,
@@ -36,7 +35,6 @@ async function run() {
     }
 
     if (conflictArray.length > 0) {
-      console.log('conflictArray', conflictArray)
       await createConflictComment({
         octokit,
         repo,
@@ -145,6 +143,8 @@ async function attemptMerge(pr1, pr2) {
         "git diff --name-only --diff-filter=U"
       ).toString();
       conflictFiles = output.split("\n").filter(Boolean); // Convert string output to an array and filter out any empty strings
+      console.log(`Conflicts found: ${conflictFiles.join(", ")}`);
+      console.log("output", output);
     }
   } finally {
     // Only abort if there was a merge conflict detected
@@ -155,7 +155,6 @@ async function attemptMerge(pr1, pr2) {
 
   return conflictFiles;
 }
-
 
 async function createConflictComment({
   octokit,
