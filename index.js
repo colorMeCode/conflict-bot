@@ -197,7 +197,7 @@ async function createConflictComment({
 
     conflictArray.forEach((conflict) => {
       conflictMessage += `<details>\n`;
-      conflictMessage += `  <summary><strong>Author:</strong> ${conflict.user} - <strong>PR:</strong> #${conflict.number}</summary>\n`;
+      conflictMessage += `  <summary><strong>Author:</strong> @${conflict.user} - <strong>PR:</strong> #${conflict.number}</summary>\n`;
 
       // Loop through the conflicts array for each PR
       conflict.conflicts.forEach((fileConflict) => {
