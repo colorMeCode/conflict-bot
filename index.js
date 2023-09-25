@@ -129,6 +129,10 @@ async function attemptMerge(pr1, pr2) {
   let conflictFiles = [];
 
   try {
+    // Configure Git with a dummy user identity
+    execSync(`git config user.email "action@github.com"`);
+    execSync(`git config user.name "GitHub Action"`);
+    
     // Fetch PR branches into temporary refs
     execSync(`git fetch origin ${pr1}:refs/remotes/origin/tmp_${pr1}`);
     execSync(`git fetch origin ${pr2}:refs/remotes/origin/tmp_${pr2}`);
