@@ -204,7 +204,7 @@ async function createConflictComment({
         conflictMessage += `  <span><strong>File:</strong> ${fileConflict.file}</span><br />`;
         conflictMessage += `  <span><strong>${
           fileConflict.lines.length > 1 ? "Lines" : "Line"
-        }:</strong> ${fileConflict.lines.join(", ")}</span>\n`;
+        }:</strong> ${fileConflict.lines.join(", ")}</span><br /><br />`;
       });
 
       conflictMessage += `</details>\n\n`;
