@@ -1,6 +1,7 @@
 const core = require("@actions/core");
 const github = require("@actions/github");
 const { execSync } = require("child_process");
+const readFileSync = require("fs").readFileSync;
 
 async function run() {
   try {
@@ -18,18 +19,18 @@ async function run() {
     let conflictArray = [];
 
     for (const openPullRequest of otherOpenPullRequests) {
-      const conflictFiles = await checkForConflicts({
+      const conflictData = await checkForConflicts({
         octokit,
         repo,
         pr1Number: pullRequest.number,
         pr2Number: openPullRequest.number,
       });
 
-      if (conflictFiles.length > 0) {
+      if (Object.keys(conflictData).length > 0) {
         conflictArray.push({
           number: openPullRequest.number,
           user: openPullRequest.user.login,
-          conflictFiles,
+          conflictData,
         });
       }
     }
@@ -99,9 +100,9 @@ async function checkForConflicts({ octokit, repo, pr1Number, pr2Number }) {
     return [];
   }
 
-  const conflictFiles = await attemptMerge(pr1Branch, pr2Branch);
+  const conflictData = await attemptMerge(pr1Branch, pr2Branch);
 
-  return conflictFiles;
+  return conflictData;
 }
 
 async function getBranchName(octokit, repo, prNumber) {
@@ -124,8 +125,43 @@ async function getChangedFiles(octokit, repo, prNumber) {
   return files.map((file) => file.filename);
 }
 
+function extractConflictingLineNumbers(filePath) {
+  const fileContent = readFileSync(filePath, "utf8");
+
+  const lines = fileContent.split("\n");
+
+  let inConflict = false;
+  let lineCounter = 0;
+  const conflictLines = [];
+
+  for (const line of lines) {
+    lineCounter++; // keep track of the line number
+
+    if (line.startsWith("<<<<<<<")) {
+      inConflict = false; // Turn off inConflict for "ours"
+      continue;
+    }
+
+    if (line.startsWith("=======") && !inConflict) {
+      inConflict = true; // Turn on inConflict for "theirs"
+      continue;
+    }
+
+    if (line.startsWith(">>>>>>>")) {
+      inConflict = false;
+      continue;
+    }
+
+    if (inConflict) {
+      conflictLines.push(lineCounter);
+    }
+  }
+
+  return conflictLines;
+}
+
 async function attemptMerge(pr1, pr2) {
-  let conflictFiles = [];
+  const conflictData = {};
 
   try {
     // Configure Git with a dummy user identity
@@ -148,18 +184,23 @@ async function attemptMerge(pr1, pr2) {
         const output = execSync(
           "git diff --name-only --diff-filter=U"
         ).toString();
-        conflictFiles = output.split("\n").filter(Boolean);
+        const conflictFileNames = output.split("\n").filter(Boolean);
+
+        for (const filename of conflictFileNames) {
+          conflictData[filename] = extractConflictingLineNumbers(filename);
+        }
       }
     }
   } catch (error) {
     console.error(`Error during merge process: ${error.message}`);
   } finally {
+    execSync(`git reset --hard HEAD`); // Reset any changes
     // Cleanup by deleting temporary refs
     execSync(`git update-ref -d refs/remotes/origin/tmp_${pr1}`);
     execSync(`git update-ref -d refs/remotes/origin/tmp_${pr2}`);
   }
 
-  return conflictFiles;
+  return conflictData;
 }
 
 async function createConflictComment({
@@ -171,14 +212,18 @@ async function createConflictComment({
   try {
     let conflictMessage = "### Conflicts Found\n\n";
 
-    conflictArray.forEach((conflict) => {
+    for (const data of conflictArray) {
       conflictMessage += `<details>\n`;
-      conflictMessage += `  <summary><strong>Author:</strong> @${conflict.user} - <strong>PR:</strong> #${conflict.number}</summary>\n`;
-      conflict.conflictFiles.forEach((fileName) => {
-        conflictMessage += `  <span><strong>${fileName}</span><br />`;
-      });
+      conflictMessage += `  <summary><strong>Author:</strong> @${data.user} - <strong>PR:</strong> #${data.number}</summary>\n`;
+
+      for (const [fileName, lineNumbers] of Object.entries(data.conflictData)) {
+        conflictMessage += `  - <strong>${fileName}:</strong> Lines ${lineNumbers.join(
+          ", "
+        )}\n`;
+      }
+
       conflictMessage += `</details>\n\n`;
-    });
+    }
 
     await octokit.rest.issues.createComment({
       owner: repo.owner,
