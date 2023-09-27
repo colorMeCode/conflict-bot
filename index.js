@@ -76,8 +76,6 @@ function prefetchBranches() {
     // Configure Git with a dummy user identity
     execSync(`git config user.email "action@github.com"`);
     execSync(`git config user.name "GitHub Action"`);
-
-    execSync(`git fetch origin main:main`);
   } catch (error) {
     console.error(`Error during prefetch process: ${error.message}`);
   }
@@ -216,6 +214,8 @@ async function attemptMerge(pr1Branch, pr2Branch) {
   const conflictData = {};
 
   try {
+    execSync(`git fetch origin main:main`);
+    
     // Fetch main PR branch into temporary ref
     execSync(
       `git fetch origin ${pr1Branch}:refs/remotes/origin/tmp_${pr1Branch}`
