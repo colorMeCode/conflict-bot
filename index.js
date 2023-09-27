@@ -7,7 +7,7 @@ async function run2() {
   try {
     const token = core.getInput("github-token", { required: true });
     const quiet = core.getInput("quiet", { required: false });
-    console.log('quiet', quiet);
+    console.log("quiet", quiet);
     const octokit = github.getOctokit(token);
 
     const pullRequest = github.context.payload.pull_request;
@@ -27,7 +27,7 @@ async function run2() {
         pr1Number: pullRequest.number,
         pr2Number: openPullRequest.number,
       });
-      console.log(openPullRequest.number, conflictData)
+      console.log(openPullRequest.number, conflictData);
 
       if (Object.keys(conflictData).length > 0) {
         conflictArray.push({
@@ -37,7 +37,7 @@ async function run2() {
         });
       }
     }
-    
+
     if (conflictArray.length > 0) {
       if (!quiet) {
         await createConflictComment({
