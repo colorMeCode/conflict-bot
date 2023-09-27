@@ -2,7 +2,7 @@ name: "Conflict-Bot"
 description: "Check for conflicts against other open PRs"
 inputs:
   github-token:
-    description: "GitHub toke"
+    description: "GitHub token"
     required: true
 runs:
   using: "node12"
