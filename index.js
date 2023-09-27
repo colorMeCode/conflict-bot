@@ -21,7 +21,7 @@ async function run() {
     pr1Branch = await getBranchName(octokit, repo, pullRequest.number);
     const pr1Files = await getChangedFiles(octokit, repo, pullRequest.number);
 
-    prefetchBranches(pr1Branch);
+    prefetchBranches();
 
     let conflictArray = [];
 
@@ -29,6 +29,7 @@ async function run() {
       const conflictData = await checkForConflicts({
         octokit,
         repo,
+        pr1Branch,
         pr1Files,
         pr2Number: openPullRequest.number,
       });
@@ -70,11 +71,7 @@ async function run() {
   }
 }
 
-function prefetchBranches(pr1Branch) {
-  if (!pr1Branch) {
-    throw new Error("Failed to fetch branch name for main PR");
-  }
-
+function prefetchBranches() {
   try {
     // Configure Git with a dummy user identity
     execSync(`git config user.email "action@github.com"`);
@@ -117,7 +114,7 @@ async function getOpenPullRequests(octokit, repo) {
   }
 }
 
-async function checkForConflicts({ octokit, repo, pr1Files, pr2Number }) {
+async function checkForConflicts({ octokit, repo, pr1Branch, pr1Files, pr2Number }) {
   const pr2Branch = await getBranchName(octokit, repo, pr2Number);
   const pr2Files = await getChangedFiles(octokit, repo, pr2Number);
 
@@ -127,7 +124,7 @@ async function checkForConflicts({ octokit, repo, pr1Files, pr2Number }) {
     return [];
   }
 
-  const conflictData = await attemptMerge(pr2Branch);
+  const conflictData = await attemptMerge(pr1Branch, pr2Branch);
 
   return conflictData;
 }
@@ -215,7 +212,7 @@ function extractConflictingLineNumbers(filePath) {
   return conflictLines;
 }
 
-async function attemptMerge(pr2Branch) {
+async function attemptMerge(pr1Branch, pr2Branch) {
   const conflictData = {};
 
   try {
