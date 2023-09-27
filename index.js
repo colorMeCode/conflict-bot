@@ -215,9 +215,7 @@ async function attemptMerge(pr1, pr2) {
 
     try {
       // Attempt to merge PR2's branch in memory without committing or fast-forwarding
-      execSync(`git merge refs/remotes/origin/tmp_${pr2} --no-commit --no-ff`, {
-        stdio: "inherit",
-      });
+      execSync(`git merge refs/remotes/origin/tmp_${pr2} --no-commit --no-ff`);
       console.log("Merge successful");
     } catch (mergeError) {
       console.log("mergeError", mergeError);
