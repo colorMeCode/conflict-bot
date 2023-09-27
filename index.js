@@ -235,8 +235,15 @@ async function attemptMerge(pr2Branch) {
 
     // Merge main into PR2 in memory
     execSync(`git checkout refs/remotes/origin/tmp_${pr2Branch}`);
-    execSync(`git merge main --no-commit --no-ff`);
-
+    // execSync(`git merge main --no-commit --no-ff`);
+    try {
+      execSync(`git merge main --no-commit --no-ff`, { stdio: 'inherit' });
+    } catch (err) {
+      console.error("Failed to merge main into PR2:", err.message);
+      console.error(err.stdout?.toString());
+      console.error(err.stderr?.toString());
+      throw err;
+    }
     try {
       // Attempt to merge PR2's branch in memory without committing or fast-forwarding
       execSync(`git merge refs/remotes/origin/tmp_${pr2Branch} --no-commit --no-ff`);
