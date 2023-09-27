@@ -215,21 +215,6 @@ async function attemptMerge(pr1, pr2) {
 
     try {
       // Attempt to merge PR2's branch in memory without committing or fast-forwarding
-      const unmergedPaths = execSync(
-        "git diff --name-only --diff-filter=U"
-      ).toString();
-      console.log("Unmerged paths after merge:", unmergedPaths);
-
-      const mergeTest = execSync(`git merge-base tmp_${pr1} tmp_${pr2}`)
-        .toString()
-        .trim();
-      const diffCheck = execSync(`git diff ${mergeTest} tmp_${pr2} --name-only`)
-        .toString()
-        .split("\n");
-
-      if (diffCheck.includes("index.js")) {
-        console.log("Potential conflict in index.js detected.");
-      }
       execSync(`git merge refs/remotes/origin/tmp_${pr2} --no-commit --no-ff`, {
         stdio: "inherit",
       });
