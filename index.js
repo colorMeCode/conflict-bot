@@ -204,6 +204,8 @@ async function attemptMerge(pr1, pr2) {
     execSync(`git checkout refs/remotes/origin/tmp_${pr2}`);
     execSync(`git merge main --no-commit --no-ff`);
 
+    execSync(`git checkout refs/remotes/origin/tmp_${pr1}`);
+
     try {
       // Attempt to merge PR2's branch in memory without committing or fast-forwarding
       execSync(`git merge refs/remotes/origin/tmp_${pr2} --no-commit --no-ff`);
