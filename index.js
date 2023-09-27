@@ -220,6 +220,7 @@ async function attemptMerge(pr1, pr2) {
       });
       console.log("Merge successful");
     } catch (mergeError) {
+      console.log("mergeError", mergeError);
       const stdoutStr = mergeError.stdout.toString();
       if (stdoutStr.includes("Automatic merge failed")) {
         const output = execSync(
