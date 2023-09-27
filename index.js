@@ -213,6 +213,8 @@ async function attemptMerge(pr1, pr2) {
 
     try {
       // Attempt to merge PR2's branch in memory without committing or fast-forwarding
+      const unmergedPaths = execSync('git diff --name-only --diff-filter=U').toString();
+      console.log("Unmerged paths after merge:", unmergedPaths);
       execSync(`git merge refs/remotes/origin/tmp_${pr2} --no-commit --no-ff`);
       console.log("Merge successful");
     } catch (mergeError) {
