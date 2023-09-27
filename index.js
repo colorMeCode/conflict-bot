@@ -204,25 +204,35 @@ async function attemptMerge(pr1, pr2) {
     // Merge main into PR1 in memory
     execSync(`git checkout refs/remotes/origin/tmp_${pr1}`);
     execSync(`git merge main --no-commit --no-ff`);
+    execSync(`git reset --hard HEAD`);
 
     // Merge main into PR2 in memory
     execSync(`git checkout refs/remotes/origin/tmp_${pr2}`);
     execSync(`git merge main --no-commit --no-ff`);
+    execSync(`git reset --hard HEAD`);
 
     execSync(`git checkout refs/remotes/origin/tmp_${pr1}`);
 
     try {
       // Attempt to merge PR2's branch in memory without committing or fast-forwarding
-      const unmergedPaths = execSync('git diff --name-only --diff-filter=U').toString();
+      const unmergedPaths = execSync(
+        "git diff --name-only --diff-filter=U"
+      ).toString();
       console.log("Unmerged paths after merge:", unmergedPaths);
 
-const mergeTest = execSync(`git merge-base tmp_${pr1} tmp_${pr2}`).toString().trim();
-const diffCheck = execSync(`git diff ${mergeTest} tmp_${pr2} --name-only`).toString().split('\n');
+      const mergeTest = execSync(`git merge-base tmp_${pr1} tmp_${pr2}`)
+        .toString()
+        .trim();
+      const diffCheck = execSync(`git diff ${mergeTest} tmp_${pr2} --name-only`)
+        .toString()
+        .split("\n");
 
-if (diffCheck.includes('index.js')) {
-   console.log("Potential conflict in index.js detected.");
-}
-      execSync(`git merge refs/remotes/origin/tmp_${pr2} --no-commit --no-ff`, { stdio: 'inherit' });
+      if (diffCheck.includes("index.js")) {
+        console.log("Potential conflict in index.js detected.");
+      }
+      execSync(`git merge refs/remotes/origin/tmp_${pr2} --no-commit --no-ff`, {
+        stdio: "inherit",
+      });
       console.log("Merge successful");
     } catch (mergeError) {
       const stdoutStr = mergeError.stdout.toString();
