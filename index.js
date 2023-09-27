@@ -81,11 +81,6 @@ function prefetchBranches(pr1Branch) {
     execSync(`git config user.name "GitHub Action"`);
 
     execSync(`git fetch origin main:main`);
-
-    // Fetch main PR branch into temporary ref
-    execSync(
-      `git fetch origin ${pr1Branch}:refs/remotes/origin/tmp_${pr1Branch}`
-    );
   } catch (error) {
     console.error(`Error during prefetch process: ${error.message}`);
   }
@@ -224,26 +219,22 @@ async function attemptMerge(pr2Branch) {
   const conflictData = {};
 
   try {
-    // Fetch conflicting PR branch into temporary ref
+    // Fetch main PR branch into temporary ref
     execSync(
-      `git fetch origin ${pr2Branch}:refs/remotes/origin/tmp_${pr2Branch}`
+      `git fetch origin ${pr1Branch}:refs/remotes/origin/tmp_${pr1Branch}`
     );
-
     // Merge main into PR1 in memory
     execSync(`git checkout refs/remotes/origin/tmp_${pr1Branch}`);
     execSync(`git merge main --no-commit --no-ff`);
     
+    // Fetch conflicting PR branch into temporary ref
+    execSync(
+      `git fetch origin ${pr2Branch}:refs/remotes/origin/tmp_${pr2Branch}`
+    );
     // Merge main into PR2 in memory
     execSync(`git checkout refs/remotes/origin/tmp_${pr2Branch}`);
-    // execSync(`git merge main --no-commit --no-ff`);
-    try {
-      execSync(`git merge main --no-commit --no-ff`, { stdio: 'inherit' });
-    } catch (err) {
-      console.error("Failed to merge main into PR2:", err.message);
-      console.error(err.stdout?.toString());
-      console.error(err.stderr?.toString());
-      throw err;
-    }
+    execSync(`git merge main --no-commit --no-ff`, { stdio: 'inherit' });
+    
     try {
       // Attempt to merge PR2's branch in memory without committing or fast-forwarding
       execSync(`git merge refs/remotes/origin/tmp_${pr2Branch} --no-commit --no-ff`);
