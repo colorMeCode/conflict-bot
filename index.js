@@ -207,6 +207,7 @@ async function attemptMerge(pr1, pr2) {
     // Fetch PR branches into temporary refs
     execSync(`git fetch origin ${pr1}:refs/remotes/origin/tmp_${pr1}`); // 3
     execSync(`git fetch origin ${pr2}:refs/remotes/origin/tmp_${pr2}`); // 4
+    // execSync(`git fetch origin ${pr1}:${pr1}`); // 3
 
     // Merge main into PR1 in memory
     execSync(`git checkout refs/remotes/origin/tmp_${pr1}`);
