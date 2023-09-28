@@ -171,7 +171,7 @@ function extractConflictingLineNumbers(filePath) {
           theirsBlock[index] !== undefined &&
           ourLine !== theirsBlock[index]
         ) {
-          const actualLineNumber = conflictStartLine + index;
+          const actualLineNumber = conflictStartLine + index + oursBlock.length;
           conflictLines.push(actualLineNumber);
         }
       });
