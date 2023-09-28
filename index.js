@@ -270,7 +270,7 @@ async function createConflictComment({
           (file) => file.filename === fileName
         ).blob_url;
 
-        conflictMessage += `\u2015 <strong><a href="${blobUrl}">${fileName}</a>:</strong> ${lineNumbers.join(
+        conflictMessage += `\u00A0\u00A0\u00A0 <strong><a href="${blobUrl}">${fileName}</a> - </strong> ${lineNumbers.join(
           ", "
         )}<br />`;
       }
