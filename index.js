@@ -172,7 +172,7 @@ function extractConflictingLineNumbers(filePath) {
           ourLine !== theirsBlock[index]
         ) {
           // Calculate the relative offset within the "theirs" block
-          const offsetInTheirBlock = conflictStartLine + index + 1; // +1 for the divider line
+          const offsetInTheirBlock = conflictStartLine + index;
           conflictLines.push(offsetInTheirBlock);
         }
       });
