@@ -139,6 +139,7 @@ function extractConflictingLineNumbers(filePath) {
 
   let lineCounter = 0;
   const conflictLines = [];
+  const hello = [];
   let oursBlock = [];
   let theirsBlock = [];
   let inOursBlock = false;
@@ -204,8 +205,8 @@ async function attemptMerge(pr1, pr2) {
     execSync(`git fetch origin ${mainBranch}:${mainBranch}`);
 
     // Fetch PR branches into temporary refs
-    execSync(`git fetch origin ${pr1}:refs/remotes/origin/tmp_${pr1}`);
-    execSync(`git fetch origin ${pr2}:refs/remotes/origin/tmp_${pr2}`);
+    execSync(`git fetch origin ${pr1}:refs/remotes/origin/tmp_${pr1}`); // 3
+    execSync(`git fetch origin ${pr2}:refs/remotes/origin/tmp_${pr2}`); // 4
 
     // Merge main into PR1 in memory
     execSync(`git checkout refs/remotes/origin/tmp_${pr1}`);
