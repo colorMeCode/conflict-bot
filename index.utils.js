@@ -10,20 +10,27 @@ function formatLineNumbers(numbers) {
     if (numbers[i] === end + 1) {
       end = numbers[i];
     } else {
-      if (start !== end) {
+      if (end - start >= 2) {
+        // Check if there's more than one number in between
         formatted.push(`${start}...${end}`);
       } else {
         formatted.push(start.toString());
+        if (end !== start) {
+          formatted.push(end.toString());
+        }
       }
       start = end = numbers[i];
     }
   }
 
   // Add the last number or range to the formatted array
-  if (start !== end) {
+  if (end - start >= 2) {
     formatted.push(`${start}...${end}`);
   } else {
     formatted.push(start.toString());
+    if (end !== start) {
+      formatted.push(end.toString());
+    }
   }
 
   return formatted.join(", ");
