@@ -137,55 +137,61 @@ function extractConflictingLineNumbers(filePath) {
   const fileContent = readFileSync(filePath, "utf8");
   const lines = fileContent.split("\n");
 
-  let lineCounter = 0;
+  let lineNumber = 0; // Actual line number in the file
+  let netAdjustment = 0; // Net line adjustment caused by PR1
   const conflictLines = [];
-  const hello = [];
-  let oursBlock = [];
-  let theirsBlock = [];
+
   let inOursBlock = false;
   let inTheirsBlock = false;
-  let conflictStartLine = 0;
+
+  let oursBlock = [];
+  let theirsBlock = [];
 
   for (const line of lines) {
-    if (!inOursBlock && !inTheirsBlock) {
-      lineCounter++; // Increment only outside of conflict blocks.
-    }
+    lineNumber++;
 
+    // Detect conflict start
     if (line.startsWith("<<<<<<< HEAD")) {
       inOursBlock = true;
-      conflictStartLine = lineCounter;
       continue;
     }
 
+    // Detect divider
     if (line.startsWith("=======")) {
       inOursBlock = false;
       inTheirsBlock = true;
       continue;
     }
 
+    // Detect conflict end
     if (line.startsWith(">>>>>>>")) {
       inTheirsBlock = false;
 
-      oursBlock.forEach((ourLine, index) => {
-        if (
-          theirsBlock[index] !== undefined &&
-          ourLine !== theirsBlock[index]
-        ) {
-          // Calculate the relative offset within the "theirs" block
-          const offsetInTheirBlock = conflictStartLine + index;
-          conflictLines.push(offsetInTheirBlock);
+      // Process conflict here. Compare 'oursBlock' and 'theirsBlock'
+      theirsBlock.forEach((theirLine, index) => {
+        if (oursBlock[index] !== theirLine) {
+          conflictLines.push(
+            lineNumber - theirsBlock.length + index + netAdjustment
+          );
         }
       });
 
+      // Reset blocks
       oursBlock = [];
       theirsBlock = [];
       continue;
     }
 
+    // Store lines in respective blocks
     if (inOursBlock) {
       oursBlock.push(line);
+      netAdjustment--;
     } else if (inTheirsBlock) {
       theirsBlock.push(line);
+      netAdjustment++;
+    } else {
+      // When not in a conflict block, reset the adjustment for non-conflict lines
+      netAdjustment = 0;
     }
   }
 
