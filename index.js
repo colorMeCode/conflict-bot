@@ -3,6 +3,8 @@ const github = require("@actions/github");
 const { execSync } = require("child_process");
 const readFileSync = require("fs").readFileSync;
 
+const { formatLineNumbers } = require("./index.utils");
+
 async function run2() {
   try {
     const token = core.getInput("github-token", { required: true });
@@ -270,8 +272,8 @@ async function createConflictComment({
           (file) => file.filename === fileName
         ).blob_url;
 
-        conflictMessage += `\u00A0\u00A0\u00A0 <strong><a href="${blobUrl}">${fileName}</a> \u2015 </strong> ${lineNumbers.join(
-          ", "
+        conflictMessage += `\u00A0\u00A0\u00A0 <strong><a href="${blobUrl}">${fileName}</a> \u2015 </strong> ${formatLineNumbers(
+          lineNumbers
         )}<br />`;
       }
 
