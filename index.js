@@ -32,7 +32,6 @@ async function run2() {
 
     for (const openPullRequest of otherOpenPullRequests) {
       const conflictData = await checkForConflicts({
-        mainBranch,
         octokit,
         repo,
         pr1Number: pullRequest.number,
@@ -122,13 +121,7 @@ async function getOpenPullRequests(octokit, repo) {
   }
 }
 
-async function checkForConflicts({
-  mainBranch,
-  octokit,
-  repo,
-  pr1Number,
-  pr2Number,
-}) {
+async function checkForConflicts({ octokit, repo, pr1Number, pr2Number }) {
   const pr1Branch = await getBranchName(octokit, repo, pr1Number);
   const pr2Branch = await getBranchName(octokit, repo, pr2Number);
 
@@ -145,7 +138,7 @@ async function checkForConflicts({
     return [];
   }
 
-  const conflictData = await attemptMerge(mainBranch, pr1Branch, pr2Branch);
+  const conflictData = await attemptMerge(pr1Branch, pr2Branch);
 
   return conflictData;
 }
@@ -232,7 +225,7 @@ function extractConflictingLineNumbers(filePath) {
   return conflictLines;
 }
 
-async function attemptMerge(mainBranch, pr1, pr2) {
+async function attemptMerge(pr1, pr2) {
   const mainBranch =
     core.getInput("main-branch", { required: false }) || "main";
 
