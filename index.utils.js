@@ -1,3 +1,5 @@
+const core = require("@actions/core");
+
 function formatLineNumbers(numbers) {
   if (!numbers || numbers.length === 0) return "";
 
@@ -36,6 +38,15 @@ function formatLineNumbers(numbers) {
   return formatted.join(", ");
 }
 
+function debug(arguments) {
+  const debug = core.getInput("debug", { required: false });
+  const enableLogging = ["true", "yes", "on"].includes(debug.toLowerCase());
+  if (enableLogging) {
+    console.log(...arguments);
+  }
+}
+
 module.exports = {
+  debug,
   formatLineNumbers,
 };

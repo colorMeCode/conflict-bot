@@ -25,3 +25,4 @@ jobs:
           github-token: ${{ secrets.CONFLICT_BOT_ACCESS_TOKEN }}
           main-branch: main
           quiet: off
+          debug: true
