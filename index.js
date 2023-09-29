@@ -3,7 +3,7 @@ const github = require("@actions/github");
 const { execSync } = require("child_process");
 const readFileSync = require("fs").readFileSync;
 
-const { debug, formatLineNumbers } = require("./index.utils");
+const { formatLineNumbers } = require("./index.utils");
 
 async function run2() {
   try {
