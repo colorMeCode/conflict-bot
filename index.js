@@ -316,6 +316,8 @@ async function attemptMerge(otherPullRequestName) {
 
     execSync(`git checkout refs/remotes/origin/tmp_${pullRequestName}`);
 
+    debug(execSync("git branch -a").toString());
+
     try {
       // Attempt to merge other pull request branch in memory without committing or fast-forwarding
       execSync(
