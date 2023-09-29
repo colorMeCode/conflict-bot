@@ -27,4 +27,4 @@ jobs:
           github-token: ${{ secrets.CONFLICT_BOT_ACCESS_TOKEN }}
           debug: true
           main-branch: main
-          quiet: false
+          quiet: true
