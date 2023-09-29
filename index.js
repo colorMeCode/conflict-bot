@@ -219,7 +219,7 @@ async function getChangedFiles(anyPullRequestNumber) {
 
 function extractConflictingLineNumbers(otherPullRequestName, filePath) {
   const fileContentWithoutConflicts = execSync(
-    `git show refs/heads/${otherPullRequestName}:${filePath}`
+    `git show ${otherPullRequestName}:${filePath}`
   ).toString();
   const linesFromNormalFile = fileContentWithoutConflicts.split("\n");
 
