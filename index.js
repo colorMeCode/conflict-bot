@@ -244,16 +244,6 @@ function extractConflictingLineNumbers(otherPullRequestName, filePath) {
     debug("NORMAL  : ", lineCounterNormalFile, lineFromNormalFile);
     debug("CONFLICT: ", lineCounterConflictFile, lineFromConflictFile);
 
-    if (
-      lineFromConflictFile === lineFromNormalFile &&
-      !inOursBlock &&
-      !inTheirsBlock
-    ) {
-      lineCounterConflictFile++;
-      lineCounterNormalFile++;
-      continue;
-    }
-
     if (lineFromConflictFile.startsWith("<<<<<<< HEAD")) {
       inOursBlock = true;
       oursBlock = [];
@@ -291,8 +281,14 @@ function extractConflictingLineNumbers(otherPullRequestName, filePath) {
       theirsBlock.push(lineFromConflictFile);
       lineCounterConflictFile++;
     } else {
-      // This line was added by the other branch during the merge
-      lineCounterConflictFile++;
+      if (lineFromConflictFile === lineFromNormalFile) {
+        lineCounterConflictFile++;
+        lineCounterNormalFile++;
+      } else {
+        // Line in conflict file doesn't match line in normal file
+        // and it's not part of a conflict block => it was added by the other branch
+        lineCounterConflictFile++;
+      }
     }
   }
 
