@@ -272,6 +272,7 @@ async function attemptMerge(otherPullRequestName) {
   const variables = new Variables();
   const mainBranch = variables.get("mainBranch");
   const pullRequestName = variables.get("pullRequestName");
+  const quiet = variables.get("quiet");
 
   const conflictData = {};
 
@@ -299,6 +300,12 @@ async function attemptMerge(otherPullRequestName) {
     } catch (mergeError) {
       const stdoutStr = mergeError.stdout.toString();
       if (stdoutStr.includes("Automatic merge failed")) {
+        if (quiet) {
+          return {
+            0: "Extracting data is unnecessary if commenting is disabled.",
+          };
+        }
+
         const output = execSync(
           "git diff --name-only --diff-filter=U"
         ).toString();
@@ -362,7 +369,6 @@ async function createConflictComment(conflictArray) {
 
     const prs = conflictArray.length === 1 ? "PR" : "PRs";
 
-    // Add the comment title
     conflictMessage =
       `Conflicts detected in ${totalFilesWithConflicts} files across ${conflictArray.length} ${prs}\n\n` +
       conflictMessage;
@@ -381,9 +387,9 @@ async function createConflictComment(conflictArray) {
 
 async function requestReviews(conflictArray) {
   const variables = new Variables();
-  const octokit = variables.get("octokit"); // 3
-  const pullRequestAuthor = variables.get("pullRequestAuthor"); // 2
-  const pullRequestNumber = variables.get("pullRequestNumber"); // 1
+  const octokit = variables.get("octokit");
+  const pullRequestAuthor = variables.get("pullRequestAuthor");
+  const pullRequestNumber = variables.get("pullRequestNumber");
   const repo = variables.get("repo");
 
   try {
