@@ -260,12 +260,13 @@ function extractConflictingLineNumbers(filePath) {
           conflictLines.push(actualLineNumber);
         }
       });
+      debug(`Ours block: ${oursBlock.length}`);
+      debug(`Theirs block: ${theirsBlock.length}`);
 
       oursBlock = [];
       theirsBlock = [];
 
       debug(`Line count after conflict: ${lineCounter + theirsBlock.length}`);
-      debug(`Theirs block: ${theirsBlock.length}`);
       lineCounter += theirsBlock.length;
       continue;
     }
