@@ -307,21 +307,15 @@ async function attemptMerge(otherPullRequestName) {
       `git fetch origin ${otherPullRequestName}:refs/remotes/origin/tmp_${otherPullRequestName}`
     );
 
-    execSync(`git fetch origin ${otherPullRequestName}`);
-
     // Merge main into other pull request in memory
     execSync(`git checkout refs/remotes/origin/tmp_${otherPullRequestName}`);
     execSync(`git merge ${mainBranch} --no-commit --no-ff`);
     execSync(`git reset --hard HEAD`);
 
-    execSync(`git checkout refs/remotes/origin/tmp_${pullRequestName}`);
-
-    debug(execSync("git branch -a").toString());
-
     try {
       // Attempt to merge other pull request branch in memory without committing or fast-forwarding
       execSync(
-        `git merge refs/remotes/origin/tmp_${otherPullRequestName} --no-commit --no-ff`
+        `git merge refs/remotes/origin/tmp_${pullRequestName} --no-commit --no-ff`
       );
 
       debug(`${otherPullRequestName} merge successful. No conflicts found.`);
