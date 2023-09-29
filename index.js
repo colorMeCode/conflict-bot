@@ -307,6 +307,8 @@ async function attemptMerge(otherPullRequestName) {
       `git fetch origin ${otherPullRequestName}:refs/remotes/origin/tmp_${otherPullRequestName}`
     );
 
+    execSync(`git fetch origin ${otherPullRequestName}`);
+
     // Merge main into other pull request in memory
     execSync(`git checkout refs/remotes/origin/tmp_${otherPullRequestName}`);
     execSync(`git merge ${mainBranch} --no-commit --no-ff`);
@@ -358,11 +360,11 @@ async function createConflictComment(conflictArray) {
   const repo = variables.get("repo");
 
   try {
-    let conflictMessage = "### 🤖 Merge Issues Detected\n\n";
+    let conflictMessage = "🤖 Merge Issues Detected\n\n";
 
     for (const data of conflictArray) {
       conflictMessage += `<details>\n`;
-      conflictMessage += `  <summary><strong>Pull Request #${data.number}</strong></summary>\n`;
+      conflictMessage += `  <summary>Pull Request #${data.number}</summary>\n`;
 
       for (const [fileName, lineNumbers] of Object.entries(data.conflictData)) {
         const { data: files } = await octokit.rest.pulls.listFiles({
@@ -375,7 +377,7 @@ async function createConflictComment(conflictArray) {
           (file) => file.filename === fileName
         ).blob_url;
 
-        conflictMessage += `\u00A0\u00A0\u00A0 <strong><a href="${blobUrl}">${fileName}</a> \u2015 </strong> ${formatLineNumbers(
+        conflictMessage += `\u00A0\u00A0\u00A0 <a href="${blobUrl}">${fileName}</a> \u2015 ${formatLineNumbers(
           lineNumbers
         )}<br />`;
       }
