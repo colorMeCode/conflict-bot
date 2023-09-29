@@ -151,7 +151,7 @@ function extractConflictingLineNumbers(filePath) {
       lineCounter++; // Increment only outside of conflict blocks.
     }
 
-    console.log(lineCounter, line);
+    // console.log(lineCounter, line);
 
     if (line.startsWith("<<<<<<< HEAD")) {
       inOursBlock = true;
