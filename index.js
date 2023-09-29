@@ -226,83 +226,42 @@ function extractConflictingLineNumbers(otherPullRequestName, filePath) {
   const fileContentWithConflicts = readFileSync(filePath, "utf8");
   const linesFromConflictFile = fileContentWithConflicts.split("\n");
 
-  let lineCounterConflictFile = 0;
-  let lineCounterNormalFile = 0;
   const conflictLines = [];
   let oursBlock = [];
-  let theirsBlock = [];
   let inOursBlock = false;
-  let inTheirsBlock = false;
 
-  while (
-    lineCounterConflictFile < linesFromConflictFile.length &&
-    lineCounterNormalFile < linesFromNormalFile.length
-  ) {
-    const lineFromConflictFile = linesFromConflictFile[lineCounterConflictFile];
-    const lineFromNormalFile = linesFromNormalFile[lineCounterNormalFile];
-
-    debug("NORMAL  : ", lineCounterNormalFile, lineFromNormalFile);
-    debug("CONFLICT: ", lineCounterConflictFile, lineFromConflictFile);
-
+  for (const lineFromConflictFile of linesFromConflictFile) {
     if (lineFromConflictFile.startsWith("<<<<<<< HEAD")) {
       inOursBlock = true;
       oursBlock = [];
-      theirsBlock = [];
-      lineCounterConflictFile++;
       continue;
     }
 
     if (lineFromConflictFile.startsWith("=======")) {
       inOursBlock = false;
-      inTheirsBlock = true;
-      lineCounterConflictFile++;
+      const startIndex = linesFromNormalFile.indexOf(oursBlock[0]);
+      if (startIndex !== -1) {
+        // Verify that the block matches
+        const doesMatch = oursBlock.every(
+          (ourLine, index) =>
+            ourLine === linesFromNormalFile[startIndex + index]
+        );
+        if (doesMatch) {
+          for (let i = 0; i < oursBlock.length; i++) {
+            conflictLines.push(startIndex + i + 1); // +1 for 1-indexed line numbers
+          }
+        }
+      }
       continue;
     }
 
     if (lineFromConflictFile.startsWith(">>>>>>>")) {
-      inTheirsBlock = false;
-      oursBlock.forEach((ourLine, index) => {
-        if (ourLine !== theirsBlock[index]) {
-          const actualLineNumber = lineCounterNormalFile + index + 1;
-          debug(`Conflict detected on line ${actualLineNumber}`);
-          conflictLines.push(actualLineNumber);
-        }
-      });
-
-      lineCounterConflictFile++;
-      lineCounterNormalFile += oursBlock.length;
+      oursBlock = [];
       continue;
     }
 
     if (inOursBlock) {
       oursBlock.push(lineFromConflictFile);
-      lineCounterConflictFile++;
-    } else if (inTheirsBlock) {
-      theirsBlock.push(lineFromConflictFile);
-      lineCounterConflictFile++;
-    } else {
-      if (lineFromConflictFile === lineFromNormalFile) {
-        lineCounterConflictFile++;
-        lineCounterNormalFile++;
-      } else {
-        let tempCounter = lineCounterConflictFile + 1;
-        while (
-          tempCounter < linesFromConflictFile.length &&
-          linesFromConflictFile[tempCounter] !== lineFromNormalFile
-        ) {
-          tempCounter++;
-        }
-
-        if (
-          tempCounter < linesFromConflictFile.length &&
-          linesFromConflictFile[tempCounter] === lineFromNormalFile
-        ) {
-          lineCounterConflictFile = tempCounter;
-        } else {
-          lineCounterConflictFile++;
-          lineCounterNormalFile++;
-        }
-      }
     }
   }
 
