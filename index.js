@@ -46,7 +46,7 @@ class Variables {
 
 async function main() {
   try {
-    setup();
+    await setup();
 
     const conflictArray = await getConflictArrayData();
 
@@ -193,7 +193,7 @@ async function checkForConflicts(otherPullRequestNumber) {
   return conflictData;
 }
 
-async function getBranchName(prNumber) {
+async function getBranchName(anyPullRequestNumber) {
   const variables = new Variables();
   const octokit = variables.get("octokit");
   const repo = variables.get("repo");
@@ -201,13 +201,13 @@ async function getBranchName(prNumber) {
   const { data: pr } = await octokit.rest.pulls.get({
     owner: repo.owner,
     repo: repo.repo,
-    pull_number: prNumber,
+    pull_number: anyPullRequestNumber,
   });
 
   return pr.head.ref;
 }
 
-async function getChangedFiles(prNumber) {
+async function getChangedFiles(anyPullRequestNumber) {
   const variables = new Variables();
   const octokit = variables.get("octokit");
   const repo = variables.get("repo");
@@ -215,7 +215,7 @@ async function getChangedFiles(prNumber) {
   const { data: files } = await octokit.rest.pulls.listFiles({
     owner: repo.owner,
     repo: repo.repo,
-    pull_number: prNumber,
+    pull_number: anyPullRequestNumber,
   });
 
   return files.map((file) => file.filename);
