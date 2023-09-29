@@ -7,10 +7,9 @@ const { debug, formatLineNumbers } = require("./index.utils");
 
 async function run2() {
   try {
-    const token = core.getInput("github-token", { required: true });
+    setup();
 
-    const mainBranch =
-      core.getInput("main-branch", { required: false }) || "main";
+    const token = core.getInput("github-token", { required: true });
 
     const quiet = core.getInput("quiet", { required: false }) || "false";
     const disableComments = ["true", "yes", "on"].includes(quiet.toLowerCase());
@@ -18,8 +17,6 @@ async function run2() {
     const octokit = github.getOctokit(token);
 
     const pullRequest = github.context.payload.pull_request;
-
-    setup(mainBranch, pullRequest.number);
 
     const repo = github.context.repo;
 
@@ -77,8 +74,15 @@ async function run2() {
   }
 }
 
-function setup(mainBranch, pr1) {
+async function setup() {
   try {
+    const pullRequest = github.context.payload.pull_request;
+    const octokit = github.getOctokit(token);
+    const repo = github.context.repo;
+    const pr1Branch = await getBranchName(octokit, repo, pullRequest.number);
+    const mainBranch =
+      core.getInput("main-branch", { required: false }) || "main";
+
     // Configure Git with a dummy user identity
     execSync(`git config user.email "action@github.com"`);
     execSync(`git config user.name "GitHub Action"`);
@@ -86,10 +90,12 @@ function setup(mainBranch, pr1) {
     execSync(`git fetch origin ${mainBranch}:${mainBranch}`);
 
     // Fetch PR branches into temporary refs
-    execSync(`git fetch origin ${pr1}:refs/remotes/origin/tmp_${pr1}`);
+    execSync(
+      `git fetch origin ${pr1Branch}:refs/remotes/origin/tmp_${pr1Branch}`
+    );
 
     // Merge main into PR1 in memory
-    execSync(`git checkout refs/remotes/origin/tmp_${pr1}`);
+    execSync(`git checkout refs/remotes/origin/tmp_${pr1Branch}`);
     execSync(`git merge ${mainBranch} --no-commit --no-ff`);
     execSync(`git reset --hard HEAD`);
   } catch (error) {
