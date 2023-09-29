@@ -1,5 +1,5 @@
-name: "Conflict-Booty"
-description: "Check for conflicts against other open PRs"
+name: "Conflict-Butt"
+description: "Check for conflicts against other open PRz"
 inputs:
   github-token:
     description: "GitHub token"

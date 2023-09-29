@@ -1,4 +1,4 @@
-name: Conflict-Bot Tests
+name: Conflict-Bot Testie
 
 on:
   pull_request:
