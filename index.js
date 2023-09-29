@@ -6,8 +6,13 @@ const readFileSync = require("fs").readFileSync;
 const { debug, formatLineNumbers } = require("./index.utils");
 
 async function run2() {
+  let pr1;
+
   try {
     const token = core.getInput("github-token", { required: true });
+
+    const mainBranch =
+      core.getInput("main-branch", { required: false }) || "main";
 
     const quiet = core.getInput("quiet", { required: false }) || "false";
     const disableComments = ["true", "yes", "on"].includes(quiet.toLowerCase());
@@ -15,6 +20,11 @@ async function run2() {
     const octokit = github.getOctokit(token);
 
     const pullRequest = github.context.payload.pull_request;
+
+    const pr1 = pullRequest.number;
+
+    setup(mainBranch, pr1);
+
     const repo = github.context.repo;
 
     const openPullRequests = await getOpenPullRequests(octokit, repo);
@@ -66,7 +76,29 @@ async function run2() {
     }
   } catch (error) {
     core.setFailed(error.message);
+  } finally {
+    cleanup(pr1);
   }
+}
+
+function setup(mainBranch, pr1) {
+  // Configure Git with a dummy user identity
+  execSync(`git config user.email "action@github.com"`);
+  execSync(`git config user.name "GitHub Action"`);
+
+  execSync(`git fetch origin ${mainBranch}:${mainBranch}`);
+
+  // Fetch PR branches into temporary refs
+  execSync(`git fetch origin ${pr1}:refs/remotes/origin/tmp_${pr1}`);
+
+  // Merge main into PR1 in memory
+  execSync(`git checkout refs/remotes/origin/tmp_${pr1}`);
+  execSync(`git merge ${mainBranch} --no-commit --no-ff`);
+  execSync(`git reset --hard HEAD`);
+}
+
+function cleanup() {
+  execSync(`git update-ref -d refs/remotes/origin/tmp_${pr1}`);
 }
 
 async function getOpenPullRequests(octokit, repo) {
@@ -202,21 +234,7 @@ async function attemptMerge(pr1, pr2) {
   const conflictData = {};
 
   try {
-    // Configure Git with a dummy user identity
-    execSync(`git config user.email "action@github.com"`);
-    execSync(`git config user.name "GitHub Action"`);
-
-    execSync(`git fetch origin ${mainBranch}:${mainBranch}`);
-
-    // Fetch PR branches into temporary refs
-    execSync(`git fetch origin ${pr1}:refs/remotes/origin/tmp_${pr1}`); // 3
     execSync(`git fetch origin ${pr2}:refs/remotes/origin/tmp_${pr2}`); // 4
-    // execSync(`git fetch origin ${pr1}:${pr1}`); // 3
-
-    // Merge main into PR1 in memory
-    execSync(`git checkout refs/remotes/origin/tmp_${pr1}`);
-    execSync(`git merge ${mainBranch} --no-commit --no-ff`);
-    execSync(`git reset --hard HEAD`);
 
     // Merge main into PR2 in memory
     execSync(`git checkout refs/remotes/origin/tmp_${pr2}`);
@@ -247,7 +265,6 @@ async function attemptMerge(pr1, pr2) {
   } finally {
     execSync(`git reset --hard HEAD`); // Reset any changes
     // Cleanup by deleting temporary refs
-    execSync(`git update-ref -d refs/remotes/origin/tmp_${pr1}`);
     execSync(`git update-ref -d refs/remotes/origin/tmp_${pr2}`);
   }
 
