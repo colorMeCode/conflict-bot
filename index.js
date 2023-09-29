@@ -285,9 +285,23 @@ function extractConflictingLineNumbers(otherPullRequestName, filePath) {
         lineCounterConflictFile++;
         lineCounterNormalFile++;
       } else {
-        // Line in conflict file doesn't match line in normal file
-        // and it's not part of a conflict block => it was added by the other branch
-        lineCounterConflictFile++;
+        let tempCounter = lineCounterConflictFile + 1;
+        while (
+          tempCounter < linesFromConflictFile.length &&
+          linesFromConflictFile[tempCounter] !== lineFromNormalFile
+        ) {
+          tempCounter++;
+        }
+
+        if (
+          tempCounter < linesFromConflictFile.length &&
+          linesFromConflictFile[tempCounter] === lineFromNormalFile
+        ) {
+          lineCounterConflictFile = tempCounter;
+        } else {
+          lineCounterConflictFile++;
+          lineCounterNormalFile++;
+        }
       }
     }
   }
