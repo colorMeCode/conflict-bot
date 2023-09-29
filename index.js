@@ -3,7 +3,7 @@ const github = require("@actions/github");
 const { execSync } = require("child_process");
 const readFileSync = require("fs").readFileSync;
 
-const { formatLineNumbers } = require("./index.utils");
+const { debug, formatLineNumbers } = require("./index.utils");
 
 async function run2() {
   try {
@@ -151,7 +151,7 @@ function extractConflictingLineNumbers(filePath) {
       lineCounter++; // Increment only outside of conflict blocks.
     }
 
-    // debug(lineCounter, line);
+    debug(lineCounter, line);
 
     if (line.startsWith("<<<<<<< HEAD")) {
       inOursBlock = true;

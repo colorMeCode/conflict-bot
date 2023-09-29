@@ -1,4 +1,4 @@
-// const core = require("@actions/core");
+const core = require("@actions/core");
 
 function formatLineNumbers(numbers) {
   if (!numbers || numbers.length === 0) return "";
@@ -38,17 +38,17 @@ function formatLineNumbers(numbers) {
   return formatted.join(", ");
 }
 
-// function debug(arguments) {
-//   const debugInput = core.getInput("debug", { required: false }) || "";
-//   const enableLogging = ["true", "yes", "on"].includes(
-//     debugInput.toLowerCase()
-//   );
-//   if (enableLogging) {
-//     console.log(...arguments);
-//   }
-// }
+function debug(arguments) {
+  const debugInput = core.getInput("debug", { required: false }) || "";
+  const enableLogging = ["true", "yes", "on"].includes(
+    debugInput.toLowerCase()
+  );
+  if (enableLogging) {
+    console.log(...Array.from(arguments));
+  }
+}
 
 module.exports = {
-  // debug,
+  debug,
   formatLineNumbers,
 };
