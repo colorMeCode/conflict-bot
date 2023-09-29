@@ -262,14 +262,12 @@ function extractConflictingLineNumbers(filePath) {
       });
       debug(`Ours block: ${oursBlock.length}`);
       debug(`Theirs block: ${theirsBlock.length}`);
-      debug(
-        `Line count after conflict: ${lineCounter + theirsBlock.length - 1}`
-      );
+      debug(`Line count after conflict: ${lineCounter + theirsBlock.length}`);
 
       oursBlock = [];
       theirsBlock = [];
 
-      lineCounter += theirsBlock.length - 1;
+      lineCounter += oursBlock.length;
       continue;
     }
 
