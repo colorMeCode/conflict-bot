@@ -76,8 +76,9 @@ async function run2() {
 
 async function setup() {
   try {
-    const pullRequest = github.context.payload.pull_request;
+    const token = core.getInput("github-token", { required: true });
     const octokit = github.getOctokit(token);
+    const pullRequest = github.context.payload.pull_request;
     const repo = github.context.repo;
     const pr1Branch = await getBranchName(octokit, repo, pullRequest.number);
     const mainBranch =
