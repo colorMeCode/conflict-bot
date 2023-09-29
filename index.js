@@ -73,30 +73,40 @@ async function run2() {
   } catch (error) {
     core.setFailed(error.message);
   } finally {
-    cleanup(pr1);
+    cleanup();
   }
 }
 
 function setup(mainBranch, pr1) {
-  // Configure Git with a dummy user identity
-  execSync(`git config user.email "action@github.com"`);
-  execSync(`git config user.name "GitHub Action"`);
+  try {
+    // Configure Git with a dummy user identity
+    execSync(`git config user.email "action@github.com"`);
+    execSync(`git config user.name "GitHub Action"`);
 
-  execSync(`git fetch origin ${mainBranch}:${mainBranch}`);
+    execSync(`git fetch origin ${mainBranch}:${mainBranch}`);
 
-  // Fetch PR branches into temporary refs
-  execSync(`git fetch origin ${pr1}:refs/remotes/origin/tmp_${pr1}`);
+    // Fetch PR branches into temporary refs
+    execSync(`git fetch origin ${pr1}:refs/remotes/origin/tmp_${pr1}`);
 
-  // Merge main into PR1 in memory
-  execSync(`git checkout refs/remotes/origin/tmp_${pr1}`);
-  execSync(`git merge ${mainBranch} --no-commit --no-ff`);
-  execSync(`git reset --hard HEAD`);
+    // Merge main into PR1 in memory
+    execSync(`git checkout refs/remotes/origin/tmp_${pr1}`);
+    execSync(`git merge ${mainBranch} --no-commit --no-ff`);
+    execSync(`git reset --hard HEAD`);
+  } catch (error) {
+    console.error(`Error during setup: ${error.message}`);
+    throw error;
+  }
 }
 
 function cleanup() {
-  const pullRequest = github.context.payload.pull_request;
+  try {
+    const pullRequest = github.context.payload.pull_request;
 
-  execSync(`git update-ref -d refs/remotes/origin/tmp_${pullRequest.number}`);
+    execSync(`git update-ref -d refs/remotes/origin/tmp_${pullRequest.number}`);
+  } catch (e) {
+    console.error(`Error during cleanup: ${error.message}`);
+    throw error;
+  }
 }
 
 async function getOpenPullRequests(octokit, repo) {
