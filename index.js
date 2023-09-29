@@ -6,8 +6,6 @@ const readFileSync = require("fs").readFileSync;
 const { debug, formatLineNumbers } = require("./index.utils");
 
 async function run2() {
-  let pr1;
-
   try {
     const token = core.getInput("github-token", { required: true });
 
@@ -21,9 +19,7 @@ async function run2() {
 
     const pullRequest = github.context.payload.pull_request;
 
-    const pr1 = pullRequest.number;
-
-    setup(mainBranch, pr1);
+    setup(mainBranch, pullRequest.number);
 
     const repo = github.context.repo;
 
@@ -36,6 +32,7 @@ async function run2() {
 
     for (const openPullRequest of otherOpenPullRequests) {
       const conflictData = await checkForConflicts({
+        mainBranch,
         octokit,
         repo,
         pr1Number: pullRequest.number,
@@ -98,7 +95,9 @@ function setup(mainBranch, pr1) {
 }
 
 function cleanup() {
-  execSync(`git update-ref -d refs/remotes/origin/tmp_${pr1}`);
+  const pullRequest = github.context.payload.pull_request;
+
+  execSync(`git update-ref -d refs/remotes/origin/tmp_${pullRequest.number}`);
 }
 
 async function getOpenPullRequests(octokit, repo) {
@@ -123,7 +122,13 @@ async function getOpenPullRequests(octokit, repo) {
   }
 }
 
-async function checkForConflicts({ octokit, repo, pr1Number, pr2Number }) {
+async function checkForConflicts({
+  mainBranch,
+  octokit,
+  repo,
+  pr1Number,
+  pr2Number,
+}) {
   const pr1Branch = await getBranchName(octokit, repo, pr1Number);
   const pr2Branch = await getBranchName(octokit, repo, pr2Number);
 
@@ -140,7 +145,7 @@ async function checkForConflicts({ octokit, repo, pr1Number, pr2Number }) {
     return [];
   }
 
-  const conflictData = await attemptMerge(pr1Branch, pr2Branch);
+  const conflictData = await attemptMerge(mainBranch, pr1Branch, pr2Branch);
 
   return conflictData;
 }
@@ -227,7 +232,7 @@ function extractConflictingLineNumbers(filePath) {
   return conflictLines;
 }
 
-async function attemptMerge(pr1, pr2) {
+async function attemptMerge(mainBranch, pr1, pr2) {
   const mainBranch =
     core.getInput("main-branch", { required: false }) || "main";
 
