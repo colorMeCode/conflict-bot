@@ -226,8 +226,8 @@ function extractConflictingLineNumbers(otherPullRequestName, filePath) {
   const fileContentWithConflicts = readFileSync(filePath, "utf8");
   const linesFromConflictFile = fileContentWithConflicts.split("\n");
 
-  let lineCounterConflictFile = 0;
-  let lineCounterNormalFile = 0;
+  let lineCounterConflictFile = 1;
+  let lineCounterNormalFile = 1;
   const conflictLines = [];
   let oursBlock = [];
   let theirsBlock = [];
