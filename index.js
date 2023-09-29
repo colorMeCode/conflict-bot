@@ -313,7 +313,9 @@ async function attemptMerge(otherPullRequestName) {
         const conflictFileNames = output.split("\n").filter(Boolean);
 
         for (const filename of conflictFileNames) {
-          debug(`Extracting conflicting line numbers for ${filename}`);
+          debug(
+            `Extracting conflicting line numbers for ${filename} in ${otherPullRequestName}`
+          );
           conflictData[filename] = extractConflictingLineNumbers(filename);
         }
       }
