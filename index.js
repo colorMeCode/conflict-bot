@@ -217,65 +217,74 @@ async function getChangedFiles(anyPullRequestNumber) {
   return files.map((file) => file.filename);
 }
 
-function extractConflictingLineNumbers(filePath) {
-  const fileContent = readFileSync(filePath, "utf8");
-  const lines = fileContent.split("\n");
+function extractConflictingLineNumbers(otherPullRequestName, filePath) {
+  const fileContentWithoutConflicts = execSync(
+    `git show ${otherPullRequestName}:${filePath}`
+  ).toString();
+  const linesFromNormalFile = fileContentWithoutConflicts.split("\n");
 
-  let lineCounter = 0;
+  const fileContentWithConflicts = readFileSync(filePath, "utf8");
+  const linesFromConflictFile = fileContentWithConflicts.split("\n");
+
+  let lineCounterConflictFile = 0;
+  let lineCounterNormalFile = 0;
   const conflictLines = [];
   let oursBlock = [];
   let theirsBlock = [];
   let inOursBlock = false;
   let inTheirsBlock = false;
-  let conflictStartLine = 0;
 
-  for (const line of lines) {
-    if (!inOursBlock && !inTheirsBlock) {
-      lineCounter++; // Increment only outside of conflict blocks.
-    }
+  while (
+    lineCounterConflictFile < linesFromConflictFile.length &&
+    lineCounterNormalFile < linesFromNormalFile.length
+  ) {
+    const lineFromConflictFile = linesFromConflictFile[lineCounterConflictFile];
+    const lineFromNormalFile = linesFromNormalFile[lineCounterNormalFile];
 
-    debug(lineCounter, line);
-
-    if (line.startsWith("<<<<<<< HEAD")) {
-      inOursBlock = true;
-      conflictStartLine = lineCounter;
+    if (lineFromConflictFile === lineFromNormalFile) {
+      lineCounterConflictFile++;
+      lineCounterNormalFile++;
       continue;
     }
 
-    if (line.startsWith("=======")) {
+    if (lineFromConflictFile.startsWith("<<<<<<< HEAD")) {
+      inOursBlock = true;
+      oursBlock = [];
+      theirsBlock = [];
+      lineCounterConflictFile++;
+      continue;
+    }
+
+    if (lineFromConflictFile.startsWith("=======")) {
       inOursBlock = false;
       inTheirsBlock = true;
+      lineCounterConflictFile++;
       continue;
     }
 
-    if (line.startsWith(">>>>>>>")) {
+    if (lineFromConflictFile.startsWith(">>>>>>>")) {
       inTheirsBlock = false;
-
       oursBlock.forEach((ourLine, index) => {
-        if (
-          theirsBlock[index] !== undefined &&
-          ourLine !== theirsBlock[index]
-        ) {
-          const actualLineNumber = conflictStartLine + index;
+        if (ourLine !== theirsBlock[index]) {
+          const actualLineNumber = lineCounterNormalFile + index;
           conflictLines.push(actualLineNumber);
         }
       });
-      debug(`Ours block: ${oursBlock.length}`);
-      debug(`Theirs block: ${theirsBlock.length}`);
-      debug(
-        `Line count after conflict: ${lineCounter + theirsBlock.length - 1}`
-      );
-      lineCounter += oursBlock.length - 1;
 
-      oursBlock = [];
-      theirsBlock = [];
+      lineCounterConflictFile++;
+      lineCounterNormalFile += oursBlock.length;
       continue;
     }
 
     if (inOursBlock) {
-      oursBlock.push(line);
+      oursBlock.push(lineFromConflictFile);
+      lineCounterConflictFile++;
     } else if (inTheirsBlock) {
-      theirsBlock.push(line);
+      theirsBlock.push(lineFromConflictFile);
+      lineCounterConflictFile++;
+    } else {
+      // This line was added by the other branch during the merge
+      lineCounterConflictFile++;
     }
   }
 
@@ -322,7 +331,10 @@ async function attemptMerge(otherPullRequestName) {
 
         for (const filename of conflictFileNames) {
           debug(`Extracting conflicting line numbers for ${filename}`);
-          conflictData[filename] = extractConflictingLineNumbers(filename);
+          conflictData[filename] = extractConflictingLineNumbers(
+            otherPullRequestName,
+            filename
+          );
         }
       }
     }
