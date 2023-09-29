@@ -5,67 +5,60 @@ const readFileSync = require("fs").readFileSync;
 
 const { debug, formatLineNumbers } = require("./index.utils");
 
-async function run2() {
-  try {
-    setup();
+class Variables {
+  static _instance = null;
+  _variables = {};
+
+  constructor() {
+    if (Variables._instance) {
+      return Variables._instance;
+    }
 
     const token = core.getInput("github-token", { required: true });
 
-    const quiet = core.getInput("quiet", { required: false }) || "false";
-    const disableComments = ["true", "yes", "on"].includes(quiet.toLowerCase());
-
-    const octokit = github.getOctokit(token);
+    const quietInput = core.getInput("quiet", { required: false }) || "false";
+    const quiet = ["true", "yes", "on"].includes(quietInput.toLowerCase());
 
     const pullRequest = github.context.payload.pull_request;
 
-    const repo = github.context.repo;
+    this._variables = {
+      mainBranch: core.getInput("main-branch", { required: false }) || "main",
+      octokit: github.getOctokit(token),
+      pullRequestAuthor: pullRequest.user.login,
+      pullRequestName: null,
+      pullRequestNumber: pullRequest.number,
+      quiet,
+      repo: github.context.repo,
+      token,
+    };
 
-    const openPullRequests = await getOpenPullRequests(octokit, repo);
-    const otherOpenPullRequests = openPullRequests.filter(
-      (pr) => pr.number !== pullRequest.number
-    );
+    Variables._instance = this;
+  }
 
-    let conflictArray = [];
+  set(name, value) {
+    this._variables[name] = value;
+  }
 
-    for (const openPullRequest of otherOpenPullRequests) {
-      const conflictData = await checkForConflicts({
-        octokit,
-        repo,
-        pr1Number: pullRequest.number,
-        pr2Number: openPullRequest.number,
-      });
+  get(name) {
+    return this._variables[name];
+  }
+}
 
-      if (Object.keys(conflictData).length > 0) {
-        conflictArray.push({
-          number: openPullRequest.number,
-          user: openPullRequest.user.login,
-          conflictData,
-        });
-      }
-    }
+async function main() {
+  try {
+    setup();
+
+    const conflictArray = await getConflictArrayData();
 
     if (conflictArray.length > 0) {
-      if (!disableComments) {
-        await createConflictComment({
-          octokit,
-          repo,
-          prNumber: pullRequest.number,
-          conflictArray,
-        });
+      const quiet = new Variables().get("quiet");
+      if (!quiet) {
+        await createConflictComment(conflictArray);
       }
-      await requestReviews({
-        octokit,
-        repo,
-        prNumber: pullRequest.number,
-        conflictArray,
-        prAuthor: pullRequest.user.login,
-      });
-      await requestReviewsInConflictingPRs({
-        octokit,
-        repo,
-        conflictArray,
-        prAuthor: pullRequest.user.login,
-      });
+
+      await requestReviews(conflictArray);
+
+      await requestReviewsInConflictingPRs(conflictArray);
     }
   } catch (error) {
     core.setFailed(error.message);
@@ -75,14 +68,14 @@ async function run2() {
 }
 
 async function setup() {
+  const variables = new Variables();
+  const pullRequestNumber = variables.get("pullRequestNumber");
+  const mainBranch = variables.get("mainBranch");
+
   try {
-    const token = core.getInput("github-token", { required: true });
-    const octokit = github.getOctokit(token);
-    const pullRequest = github.context.payload.pull_request;
-    const repo = github.context.repo;
-    const pr1Branch = await getBranchName(octokit, repo, pullRequest.number);
-    const mainBranch =
-      core.getInput("main-branch", { required: false }) || "main";
+    const pullRequestName = await getBranchName(pullRequestNumber);
+
+    variables.set("pullRequestName", pullRequestName);
 
     // Configure Git with a dummy user identity
     execSync(`git config user.email "action@github.com"`);
@@ -92,11 +85,11 @@ async function setup() {
 
     // Fetch PR branches into temporary refs
     execSync(
-      `git fetch origin ${pr1Branch}:refs/remotes/origin/tmp_${pr1Branch}`
+      `git fetch origin ${pullRequestName}:refs/remotes/origin/tmp_${pullRequestName}`
     );
 
     // Merge main into PR1 in memory
-    execSync(`git checkout refs/remotes/origin/tmp_${pr1Branch}`);
+    execSync(`git checkout refs/remotes/origin/tmp_${pullRequestName}`);
     execSync(`git merge ${mainBranch} --no-commit --no-ff`);
     execSync(`git reset --hard HEAD`);
   } catch (error) {
@@ -116,7 +109,11 @@ function cleanup() {
   }
 }
 
-async function getOpenPullRequests(octokit, repo) {
+async function getOpenPullRequests() {
+  const variables = new Variables();
+  const octokit = variables.get("octokit");
+  const repo = variables.get("repo");
+
   try {
     const { data: pullRequests } = await octokit.rest.pulls.list({
       owner: repo.owner,
@@ -138,29 +135,64 @@ async function getOpenPullRequests(octokit, repo) {
   }
 }
 
-async function checkForConflicts({ octokit, repo, pr1Number, pr2Number }) {
-  const pr1Branch = await getBranchName(octokit, repo, pr1Number);
-  const pr2Branch = await getBranchName(octokit, repo, pr2Number);
+async function getConflictArrayData() {
+  const variables = new Variables();
+  const pullRequestNumber = variables.get("pullRequestNumber");
+
+  const openPullRequests = await getOpenPullRequests();
+  const otherOpenPullRequests = openPullRequests.filter(
+    (pr) => pr.number !== pullRequestNumber
+  );
+
+  const conflictArray = [];
+
+  for (const openPullRequest of otherOpenPullRequests) {
+    const conflictData = await checkForConflicts(openPullRequest.number);
+
+    if (Object.keys(conflictData).length > 0) {
+      conflictArray.push({
+        number: openPullRequest.number,
+        user: openPullRequest.user.login,
+        conflictData,
+      });
+    }
+  }
+
+  return conflictArray;
+}
+
+async function checkForConflicts(otherPullRequestNumber) {
+  const variables = new Variables();
+  const pullRequestNumber = variables.get("pullRequestNumber");
+
+  const otherPullRequestName = await getBranchName(otherPullRequestNumber);
 
   if (!pr1Branch || !pr2Branch) {
     throw new Error("Failed to fetch branch name for one or both PRs.");
   }
 
-  const pr1Files = await getChangedFiles(octokit, repo, pr1Number);
-  const pr2Files = await getChangedFiles(octokit, repo, pr2Number);
+  const pullRequestFiles = await getChangedFiles(pullRequestNumber);
 
-  const overlappingFiles = pr1Files.filter((file) => pr2Files.includes(file));
+  const otherPullRequestFiles = await getChangedFiles(otherPullRequestNumber);
+
+  const overlappingFiles = pullRequestFiles.filter((file) =>
+    otherPullRequestFiles.includes(file)
+  );
 
   if (!overlappingFiles.length) {
     return [];
   }
 
-  const conflictData = await attemptMerge(pr1Branch, pr2Branch);
+  const conflictData = await attemptMerge(otherPullRequestName);
 
   return conflictData;
 }
 
-async function getBranchName(octokit, repo, prNumber) {
+async function getBranchName(prNumber) {
+  const variables = new Variables();
+  const octokit = variables.get("octokit");
+  const repo = variables.get("repo");
+
   const { data: pr } = await octokit.rest.pulls.get({
     owner: repo.owner,
     repo: repo.repo,
@@ -170,7 +202,11 @@ async function getBranchName(octokit, repo, prNumber) {
   return pr.head.ref;
 }
 
-async function getChangedFiles(octokit, repo, prNumber) {
+async function getChangedFiles(prNumber) {
+  const variables = new Variables();
+  const octokit = variables.get("octokit");
+  const repo = variables.get("repo");
+
   const { data: files } = await octokit.rest.pulls.listFiles({
     owner: repo.owner,
     repo: repo.repo,
@@ -186,7 +222,6 @@ function extractConflictingLineNumbers(filePath) {
 
   let lineCounter = 0;
   const conflictLines = [];
-  const hello = [];
   let oursBlock = [];
   let theirsBlock = [];
   let inOursBlock = false;
@@ -242,25 +277,30 @@ function extractConflictingLineNumbers(filePath) {
   return conflictLines;
 }
 
-async function attemptMerge(pr1, pr2) {
-  const mainBranch =
-    core.getInput("main-branch", { required: false }) || "main";
+async function attemptMerge(otherPullRequestName) {
+  const variables = new Variables();
+  const mainBranch = variables.get("mainBranch");
+  const pullRequestName = variables.get("pullRequestName");
 
   const conflictData = {};
 
   try {
-    execSync(`git fetch origin ${pr2}:refs/remotes/origin/tmp_${pr2}`); // 4
+    execSync(
+      `git fetch origin ${otherPullRequestName}:refs/remotes/origin/tmp_${otherPullRequestName}`
+    );
 
-    // Merge main into PR2 in memory
-    execSync(`git checkout refs/remotes/origin/tmp_${pr2}`);
+    // Merge main into other pull request in memory
+    execSync(`git checkout refs/remotes/origin/tmp_${otherPullRequestName}`);
     execSync(`git merge ${mainBranch} --no-commit --no-ff`);
     execSync(`git reset --hard HEAD`);
 
-    execSync(`git checkout refs/remotes/origin/tmp_${pr1}`);
+    execSync(`git checkout refs/remotes/origin/tmp_${pullRequestName}`);
 
     try {
-      // Attempt to merge PR2's branch in memory without committing or fast-forwarding
-      execSync(`git merge refs/remotes/origin/tmp_${pr2} --no-commit --no-ff`);
+      // Attempt to merge other pull request branch in memory without committing or fast-forwarding
+      execSync(
+        `git merge refs/remotes/origin/tmp_${otherPullRequestName} --no-commit --no-ff`
+      );
       console.log("Merge successful");
     } catch (mergeError) {
       const stdoutStr = mergeError.stdout.toString();
@@ -280,18 +320,20 @@ async function attemptMerge(pr1, pr2) {
   } finally {
     execSync(`git reset --hard HEAD`); // Reset any changes
     // Cleanup by deleting temporary refs
-    execSync(`git update-ref -d refs/remotes/origin/tmp_${pr2}`);
+    execSync(
+      `git update-ref -d refs/remotes/origin/tmp_${otherPullRequestName}`
+    );
   }
 
   return conflictData;
 }
 
-async function createConflictComment({
-  octokit,
-  repo,
-  prNumber,
-  conflictArray,
-}) {
+async function createConflictComment(conflictArray) {
+  const variables = new Variables();
+  const octokit = variables.get("octokit");
+  const pullRequestNumber = variables.get("pullRequestNumber");
+  const repo = variables.get("repo");
+
   try {
     let conflictMessage = "### 🤖 Merge Issues Detected\n\n";
 
@@ -321,7 +363,7 @@ async function createConflictComment({
     await octokit.rest.issues.createComment({
       owner: repo.owner,
       repo: repo.repo,
-      issue_number: prNumber,
+      issue_number: pullRequestNumber,
       body: conflictMessage,
     });
   } catch (error) {
@@ -330,26 +372,26 @@ async function createConflictComment({
   }
 }
 
-async function requestReviews({
-  octokit,
-  repo,
-  prNumber,
-  conflictArray,
-  prAuthor,
-}) {
+async function requestReviews(conflictArray) {
+  const variables = new Variables();
+  const octokit = variables.get("octokit");
+  const pullRequestAuthor = variables.get("pullRequestAuthor");
+  const pullRequestNumber = variables.get("pullRequestNumber");
+  const repo = variables.get("repo");
+
   try {
     const reviewers = [
       ...new Set(
         conflictArray
           .map((conflict) => conflict.user)
-          .filter((user) => user !== prAuthor)
+          .filter((user) => user !== pullRequestNumber)
       ),
     ];
 
     await octokit.rest.pulls.requestReviewers({
       owner: repo.owner,
       repo: repo.repo,
-      pull_number: prNumber,
+      pull_number: pullRequestAuthor,
       reviewers: reviewers,
     });
   } catch (error) {
@@ -358,21 +400,21 @@ async function requestReviews({
   }
 }
 
-async function requestReviewsInConflictingPRs({
-  octokit,
-  repo,
-  conflictArray,
-  prAuthor,
-}) {
+async function requestReviewsInConflictingPRs(conflictArray) {
+  const variables = new Variables();
+  const octokit = variables.get("octokit");
+  const pullRequestAuthor = variables.get("pullRequestAuthor");
+  const repo = variables.get("repo");
+
   try {
     for (const conflict of conflictArray) {
-      if (conflict.user !== prAuthor) {
+      if (conflict.user !== pullRequestAuthor) {
         // Request a review from the current PR author in each conflicting PR
         await octokit.rest.pulls.requestReviewers({
           owner: repo.owner,
           repo: repo.repo,
           pull_number: conflict.number,
-          reviewers: [prAuthor],
+          reviewers: [pullRequestAuthor],
         });
       }
     }
@@ -384,4 +426,4 @@ async function requestReviewsInConflictingPRs({
   }
 }
 
-run2();
+main();
