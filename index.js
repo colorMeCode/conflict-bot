@@ -180,6 +180,8 @@ function extractConflictingLineNumbers(filePath) {
 
       oursBlock = [];
       theirsBlock = [];
+
+      lineCounter += theirsBlock.length;
       continue;
     }
 
