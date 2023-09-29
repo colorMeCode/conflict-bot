@@ -360,14 +360,11 @@ async function createConflictComment(conflictArray) {
       conflictMessage += `</details>\n\n`;
     }
 
-    const pullRequestInfo =
-      conflictArray.length === 1
-        ? "in 1 PR"
-        : `across ${conflictArray.length} PRs`;
+    const prs = conflictArray.length === 1 ? "PR" : "PRs";
 
     // Add the comment title
     conflictMessage =
-      `Conflicts detected in ${totalFilesWithConflicts} files ${pullRequestInfo}\n\n` +
+      `Conflicts detected in ${totalFilesWithConflicts} files across ${conflictArray.length} ${prs}\n\n` +
       conflictMessage;
 
     await octokit.rest.issues.createComment({
