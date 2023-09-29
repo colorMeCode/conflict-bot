@@ -125,7 +125,7 @@ async function getOpenPullRequests() {
     // Map the list to only contain relevant information (PR number and author)
     const openPullRequests = pullRequests.map((pr) => ({
       number: pr.number,
-      user: pr.user,
+      author: pr.user,
     }));
 
     return openPullRequests;
@@ -152,7 +152,7 @@ async function getConflictArrayData() {
     if (Object.keys(conflictData).length > 0) {
       conflictArray.push({
         number: openPullRequest.number,
-        user: openPullRequest.user.login,
+        author: openPullRequest.author,
         conflictData,
       });
     }
@@ -390,8 +390,8 @@ async function requestReviews(conflictArray) {
     const reviewers = [
       ...new Set(
         conflictArray
-          .map((conflict) => conflict.user)
-          .filter((user) => user !== pullRequestAuthor)
+          .map((conflict) => conflict.author)
+          .filter((author) => author !== pullRequestAuthor)
       ),
     ];
 
@@ -417,7 +417,7 @@ async function requestReviewsInConflictingPRs(conflictArray) {
 
   try {
     for (const conflict of conflictArray) {
-      if (conflict.user !== pullRequestAuthor) {
+      if (conflict.author !== pullRequestAuthor) {
         debug(
           `Requesting review from ${pullRequestAuthor} in #${conflict.number}`
         );
