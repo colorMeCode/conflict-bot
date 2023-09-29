@@ -39,8 +39,10 @@ function formatLineNumbers(numbers) {
 }
 
 function debug(arguments) {
-  const debug = core.getInput("debug", { required: false });
-  const enableLogging = ["true", "yes", "on"].includes(debug.toLowerCase());
+  const debugInput = core.getInput("debug", { required: false }) || "";
+  const enableLogging = ["true", "yes", "on"].includes(
+    debugInput.toLowerCase()
+  );
   if (enableLogging) {
     console.log(...arguments);
   }
