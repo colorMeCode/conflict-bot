@@ -38,13 +38,13 @@ function formatLineNumbers(numbers) {
   return formatted.join(", ");
 }
 
-function debug(arguments) {
+function debug(...args) {
   const debugInput = core.getInput("debug", { required: false }) || "";
   const enableLogging = ["true", "yes", "on"].includes(
     debugInput.toLowerCase()
   );
   if (enableLogging) {
-    console.log(...Array.from(arguments));
+    console.log(...args);
   }
 }
 
