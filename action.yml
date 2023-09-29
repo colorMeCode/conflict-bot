@@ -4,6 +4,9 @@ inputs:
   github-token:
     description: "GitHub token"
     required: true
+  debug:
+    description: "Enable debug level logging"
+    required: false
   main-branch:
     description: "Name of main branch (defaults to 'main')"
     required: false
