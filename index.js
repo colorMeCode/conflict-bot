@@ -88,7 +88,7 @@ async function setup() {
       `git fetch origin ${pullRequestName}:refs/remotes/origin/tmp_${pullRequestName}`
     );
 
-    // Merge main into PR1 in memory
+    // Merge main into pull request branch in memory
     execSync(`git checkout refs/remotes/origin/tmp_${pullRequestName}`);
     execSync(`git merge ${mainBranch} --no-commit --no-ff`);
     execSync(`git reset --hard HEAD`);
@@ -163,11 +163,12 @@ async function getConflictArrayData() {
 
 async function checkForConflicts(otherPullRequestNumber) {
   const variables = new Variables();
+  const pullRequestName = variables.get("pullRequestName");
   const pullRequestNumber = variables.get("pullRequestNumber");
 
   const otherPullRequestName = await getBranchName(otherPullRequestNumber);
 
-  if (!pr1Branch || !pr2Branch) {
+  if (!pullRequestName || !otherPullRequestName) {
     throw new Error("Failed to fetch branch name for one or both PRs.");
   }
 
@@ -285,6 +286,10 @@ async function attemptMerge(otherPullRequestName) {
   const conflictData = {};
 
   try {
+    debug(
+      `Attempting to merge #${otherPullRequestName} into #${pullRequestName}`
+    );
+
     execSync(
       `git fetch origin ${otherPullRequestName}:refs/remotes/origin/tmp_${otherPullRequestName}`
     );
@@ -301,7 +306,8 @@ async function attemptMerge(otherPullRequestName) {
       execSync(
         `git merge refs/remotes/origin/tmp_${otherPullRequestName} --no-commit --no-ff`
       );
-      console.log("Merge successful");
+
+      debug(`${otherPullRequestName} merge successful. No conflicts found.`);
     } catch (mergeError) {
       const stdoutStr = mergeError.stdout.toString();
       if (stdoutStr.includes("Automatic merge failed")) {
@@ -311,6 +317,7 @@ async function attemptMerge(otherPullRequestName) {
         const conflictFileNames = output.split("\n").filter(Boolean);
 
         for (const filename of conflictFileNames) {
+          debug(`Extracting conflicting line numbers for ${filename}`);
           conflictData[filename] = extractConflictingLineNumbers(filename);
         }
       }
