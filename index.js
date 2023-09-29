@@ -265,8 +265,8 @@ function extractConflictingLineNumbers(filePath) {
       theirsBlock = [];
 
       debug(`Line count after conflict: ${lineCounter}`);
-      debug(`Our block: ${oursBlock.length}`);
-      lineCounter += oursBlock.length;
+      debug(`Theirs block: ${theirsBlock.length}`);
+      lineCounter += theirsBlock.length;
       continue;
     }
 
