@@ -44,7 +44,7 @@ class Variables {
   }
 }
 
-async function main() {
+async function main2() {
   try {
     await setup();
 
@@ -381,9 +381,9 @@ async function createConflictComment(conflictArray) {
 
 async function requestReviews(conflictArray) {
   const variables = new Variables();
-  const octokit = variables.get("octokit");
-  const pullRequestAuthor = variables.get("pullRequestAuthor");
-  const pullRequestNumber = variables.get("pullRequestNumber");
+  const octokit = variables.get("octokit"); // 3
+  const pullRequestAuthor = variables.get("pullRequestAuthor"); // 2
+  const pullRequestNumber = variables.get("pullRequestNumber"); // 1
   const repo = variables.get("repo");
 
   try {
@@ -438,4 +438,4 @@ async function requestReviewsInConflictingPRs(conflictArray) {
   }
 }
 
-main();
+main2();
