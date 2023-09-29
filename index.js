@@ -274,6 +274,7 @@ function extractConflictingLineNumbers(otherPullRequestName, filePath) {
       oursBlock.forEach((ourLine, index) => {
         if (ourLine !== theirsBlock[index]) {
           const actualLineNumber = lineCounterNormalFile + index + 1;
+          debug(`Conflict detected on line ${actualLineNumber}`);
           conflictLines.push(actualLineNumber);
         }
       });
