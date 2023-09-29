@@ -241,7 +241,11 @@ function extractConflictingLineNumbers(otherPullRequestName, filePath) {
     const lineFromConflictFile = linesFromConflictFile[lineCounterConflictFile];
     const lineFromNormalFile = linesFromNormalFile[lineCounterNormalFile];
 
-    if (lineFromConflictFile === lineFromNormalFile) {
+    if (
+      lineFromConflictFile === lineFromNormalFile &&
+      !inOursBlock &&
+      !inTheirsBlock
+    ) {
       lineCounterConflictFile++;
       lineCounterNormalFile++;
       continue;
