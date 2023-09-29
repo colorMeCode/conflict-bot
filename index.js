@@ -168,10 +168,6 @@ async function checkForConflicts(otherPullRequestNumber) {
 
   const otherPullRequestName = await getBranchName(otherPullRequestNumber);
 
-  console.log(
-    `Checking for conflicts between ${pullRequestName} and ${otherPullRequestName}`
-  );
-
   if (!pullRequestName || !otherPullRequestName) {
     throw new Error("Failed to fetch branch name for one or both PRs.");
   }
@@ -395,7 +391,7 @@ async function requestReviews(conflictArray) {
       ...new Set(
         conflictArray
           .map((conflict) => conflict.user)
-          .filter((user) => user !== pullRequestNumber)
+          .filter((user) => user !== pullRequestAuthor)
       ),
     ];
 
@@ -404,7 +400,7 @@ async function requestReviews(conflictArray) {
     await octokit.rest.pulls.requestReviewers({
       owner: repo.owner,
       repo: repo.repo,
-      pull_number: pullRequestAuthor,
+      pull_number: pullRequestNumber,
       reviewers: reviewers,
     });
   } catch (error) {
