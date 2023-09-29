@@ -125,7 +125,7 @@ async function getOpenPullRequests() {
     // Map the list to only contain relevant information (PR number and author)
     const openPullRequests = pullRequests.map((pr) => ({
       number: pr.number,
-      author: pr.user,
+      author: pr.user.login,
     }));
 
     return openPullRequests;
